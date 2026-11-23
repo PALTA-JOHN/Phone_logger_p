@@ -1,0 +1,1598 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Palta Boost Remote</title>
+<style>
+:root {
+  color-scheme: light;
+  --surface-0: #f4f3f0; --surface-1: #fcfcfb; --border: #e3e1dc; --grid: #ecebe7;
+  --text-primary: #0b0b0b; --text-secondary: #52514e; --text-muted: #8a8984;
+  --accent: #2a78d6;
+  --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; --s4: #eda100; --s5: #e87ba4; --s6: #008300; --s7: #6250d6; --s8: #e34948;
+  --good: #0ca30c; --warning: #fab219; --serious: #ec835a; --critical: #d03b3b;
+  --band: rgba(208, 59, 59, 0.09); --sel: rgba(42, 120, 214, 0.14);
+}
+@media (prefers-color-scheme: dark) {
+  :root:where(:not([data-theme="light"])) {
+    color-scheme: dark;
+    --surface-0: #121211; --surface-1: #1a1a19; --border: #2e2e2b; --grid: #262624;
+    --text-primary: #f0efec; --text-secondary: #c3c2b7; --text-muted: #8f8e87;
+    --accent: #3987e5;
+    --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500; --s5: #d55181; --s6: #0ca30c; --s7: #9085e9; --s8: #e66767;
+    --band: rgba(208, 59, 59, 0.16); --sel: rgba(57, 135, 229, 0.20);
+  }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--surface-0); color: var(--text-primary);
+  font: 13px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+header { position: sticky; top: 0; z-index: 20; min-height: 52px; background: var(--surface-1); border-bottom: 1px solid var(--border);
+  padding: 10px 16px; display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; }
+h1 { font-size: 15px; margin: 0; font-weight: 650; letter-spacing: .2px; }
+.btn { font: inherit; color: var(--text-primary); background: var(--surface-0); border: 1px solid var(--border);
+  border-radius: 6px; padding: 5px 10px; cursor: pointer; }
+.btn:hover { border-color: var(--text-muted); }
+.btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+.btn:disabled { opacity: .45; cursor: default; }
+#info { color: var(--text-secondary); font-size: 12px; flex: 1 1 300px; }
+main { padding: 12px 16px 40px; max-width: 1600px; margin: 0 auto; }
+#drop { border: 2px dashed var(--border); border-radius: 12px; padding: 48px 20px; text-align: center; color: var(--text-secondary);
+  background: var(--surface-1); margin: 24px 0; }
+#drop.over { border-color: var(--accent); color: var(--text-primary); }
+#drop b { color: var(--text-primary); font-size: 15px; }
+#drop ul { text-align: left; display: inline-block; margin: 14px 0 0; padding-left: 18px; color: var(--text-secondary); }
+.chips { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 4px 0 10px; align-items: center; }
+.chipgroup { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+.chipgroup > .glabel { color: var(--text-muted); font-size: 11px; text-transform: uppercase; letter-spacing: .5px; margin-right: 2px; }
+.chip { border: 1px solid var(--border); background: var(--surface-1); border-radius: 999px; padding: 2px 9px; cursor: pointer;
+  font-size: 12px; color: var(--text-secondary); user-select: none; }
+.chip.on { color: var(--text-primary); border-color: var(--text-muted); background: var(--surface-0); font-weight: 550; }
+.chip.na { opacity: .35; cursor: default; }
+.panel { background: var(--surface-1); border: 1px solid var(--border); border-radius: 10px; margin-bottom: 8px; padding: 6px 8px 2px; }
+.phead { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 14px; padding: 0 4px 2px 6px; }
+.ptitle { font-weight: 600; font-size: 12.5px; min-width: 150px; }
+.ptitle small { color: var(--text-muted); font-weight: 400; margin-left: 4px; }
+.leg { display: inline-flex; align-items: center; gap: 5px; cursor: pointer; font-size: 12px; color: var(--text-secondary); user-select: none; }
+.leg i { width: 14px; height: 3px; border-radius: 2px; display: inline-block; }
+.leg b { color: var(--text-primary); font-weight: 600; font-variant-numeric: tabular-nums; min-width: 3ch; }
+.leg.off { opacity: .35; }
+.cwrap { position: relative; }
+.cwrap canvas { display: block; width: 100%; }
+.cwrap canvas.ov { position: absolute; left: 0; top: 0; cursor: crosshair; touch-action: pan-y; }   /* finger: vertical swipe scrolls the page */
+#nav { margin-bottom: 10px; }
+#nav .cwrap canvas.ov { cursor: grab; }
+.ptip { position: absolute; top: 4px; z-index: 5; pointer-events: none; display: none; white-space: nowrap;
+  background: color-mix(in srgb, var(--surface-1) 90%, transparent); border: 1px solid var(--border); border-radius: 7px;
+  padding: 3px 7px; font-size: 11.5px; box-shadow: 0 2px 8px rgba(0,0,0,.10); }
+.ptip.two { column-count: 2; column-gap: 14px; }
+.ptip.two .tt { column-span: all; }
+.ptip .tr { break-inside: avoid; }
+.ptip .tt { color: var(--text-muted); font-size: 10.5px; font-variant-numeric: tabular-nums; }
+.ptip .tr { display: flex; justify-content: space-between; gap: 10px; line-height: 1.35; }
+.ptip .tr span { color: var(--text-secondary); display: inline-flex; align-items: center; gap: 5px; }
+.ptip .tr span i { width: 7px; height: 7px; border-radius: 50%; display: inline-block; }
+.ptip .tr b { font-variant-numeric: tabular-nums; font-weight: 600; color: var(--text-primary); }
+.tip { position: fixed; z-index: 30; pointer-events: none; background: var(--surface-1); border: 1px solid var(--border);
+  border-radius: 8px; padding: 6px 9px; font-size: 12px; box-shadow: 0 4px 14px rgba(0,0,0,.14); display: none; min-width: 140px; }
+.tip .tt { color: var(--text-muted); margin-bottom: 3px; font-variant-numeric: tabular-nums; }
+.tip .tr { display: flex; justify-content: space-between; gap: 14px; }
+.tip .tr span { color: var(--text-secondary); display: inline-flex; align-items: center; gap: 5px; }
+.tip .tr span i { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+.tip .tr b { font-variant-numeric: tabular-nums; font-weight: 600; }
+#stats { display: none; background: var(--surface-1); border: 1px solid var(--border); border-radius: 10px; padding: 8px 12px; margin-bottom: 10px; overflow-x: auto; }
+table { border-collapse: collapse; font-size: 12px; font-variant-numeric: tabular-nums; }
+th, td { padding: 3px 10px; text-align: right; border-bottom: 1px solid var(--grid); white-space: nowrap; }
+th { color: var(--text-secondary); font-weight: 600; position: sticky; top: 0; background: var(--surface-1); }
+td:first-child, th:first-child, td:nth-child(2), th:nth-child(2) { text-align: left; }
+td.g { color: var(--text-muted); }
+details { background: var(--surface-1); border: 1px solid var(--border); border-radius: 10px; padding: 6px 12px; margin-bottom: 10px; }
+summary { cursor: pointer; color: var(--text-secondary); }
+pre { font: 12px/1.45 ui-monospace, Consolas, monospace; overflow-x: auto; margin: 8px 0; color: var(--text-primary); }
+.hint { color: var(--text-muted); font-size: 12px; margin: 0 0 8px; }
+kbd { font: 11px ui-monospace, monospace; border: 1px solid var(--border); border-bottom-width: 2px; border-radius: 4px; padding: 0 4px; background: var(--surface-0); }
+/* ---- app: tabs, Bluetooth, dashboard, settings, console ---- */
+.tabs { display: flex; gap: 2px; background: var(--surface-0); border: 1px solid var(--border); border-radius: 8px; padding: 2px; }
+.tabs button { font: inherit; border: 0; background: transparent; color: var(--text-secondary); padding: 5px 12px; border-radius: 6px; cursor: pointer; }
+.tabs button.on { background: var(--surface-1); color: var(--text-primary); font-weight: 600; box-shadow: 0 1px 2px rgba(0,0,0,.08); }
+.tab { display: none; } .tab.on { display: block; }
+.pill { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-secondary); border: 1px solid var(--border); border-radius: 999px; padding: 3px 10px; background: var(--surface-0); }
+.pill i { width: 8px; height: 8px; border-radius: 50%; background: var(--text-muted); display: inline-block; }
+.pill[data-s="ready"] i { background: var(--good); }
+.pill[data-s="connecting"] i, .pill[data-s="pairing"] i, .pill[data-s="reconnecting"] i { background: var(--warning); animation: blink 1s infinite; }
+.pill[data-s="failed"] i { background: var(--critical); }
+@keyframes blink { 50% { opacity: .25; } }
+.banner { border-radius: 10px; padding: 9px 12px; margin: 0 0 10px; background: var(--surface-1); border: 1px solid var(--border); }
+.banner.warn { border-color: var(--warning); }
+.banner.crit { border-color: var(--critical); }
+.toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 10px; }
+select, input[type=number], input[type=text] { font: inherit; color: var(--text-primary); background: var(--surface-1); border: 1px solid var(--border); border-radius: 6px; padding: 4px 6px; }
+.btn.on { background: var(--accent); color: #fff; border-color: var(--accent); }
+/* dashboard */
+.live-top { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 10px; }
+.mapchip { font-weight: 700; font-size: 15px; padding: 4px 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface-1); }
+.flag { font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 999px; border: 1px solid var(--border); color: var(--text-muted); background: var(--surface-1); }
+.flag.on { color: var(--text-primary); }
+.flag.on.info { border-color: var(--s1); } .flag.on.warn { border-color: var(--warning); background: color-mix(in srgb, var(--warning) 18%, var(--surface-1)); }
+.flag.on.crit { border-color: var(--critical); background: color-mix(in srgb, var(--critical) 18%, var(--surface-1)); }
+.tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+.tile { background: var(--surface-1); border: 1px solid var(--border); border-radius: 10px; padding: 8px 12px 10px; position: relative; }
+.tile .tl { font-size: 12px; color: var(--text-secondary); display: flex; justify-content: space-between; }
+.tile .tv { font-size: 30px; font-weight: 650; font-variant-numeric: tabular-nums; line-height: 1.15; margin-top: 2px; }
+.tile .tv small { font-size: 13px; font-weight: 500; color: var(--text-muted); margin-left: 3px; }
+.tile.big { grid-column: span 2; } .tile.big .tv { font-size: 44px; }
+.tile.warn { border-color: var(--warning); box-shadow: inset 0 0 0 1px var(--warning); }
+.tile.crit { border-color: var(--critical); box-shadow: inset 0 0 0 1px var(--critical); }
+.tile .st { font-size: 11px; font-weight: 600; }
+.tile.warn .st { color: var(--text-primary); } .tile.crit .st { color: var(--critical); }
+.stale .tiles { opacity: .45; }
+.linkinfo { color: var(--text-secondary); font-size: 12px; margin-top: 10px; }
+/* settings */
+.setbar { position: sticky; top: 52px; z-index: 10; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; background: var(--surface-0); padding: 6px 0 8px; }
+.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(330px, 100%), 1fr)); gap: 10px; align-items: start; }
+.card { background: var(--surface-1); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; }
+.card h3 { font-size: 13.5px; margin: 0 0 6px; }
+.card .hint { margin: 2px 0 6px; }
+.row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px 10px; padding: 5px 0; border-bottom: 1px solid var(--grid); }
+.row:last-child { border-bottom: 0; }
+.row .lbl { color: var(--text-secondary); } .row .lbl small { display: block; color: var(--text-muted); font-size: 11px; }
+.ctl { display: inline-flex; align-items: center; gap: 5px; }
+.ctl input[type=number] { width: 88px; text-align: right; font-variant-numeric: tabular-nums; }
+.unit { color: var(--text-muted); font-size: 12px; min-width: 26px; }
+.seg { display: inline-flex; border: 1px solid var(--border); border-radius: 7px; overflow: hidden; }
+.seg button { font: inherit; font-size: 12px; border: 0; background: var(--surface-1); color: var(--text-secondary); padding: 5px 10px; cursor: pointer; border-left: 1px solid var(--border); }
+.seg button:first-child { border-left: 0; }
+.seg button.on { background: var(--accent); color: #fff; font-weight: 600; }
+[data-key].pend, .seg.pend { outline: 2px solid var(--warning); outline-offset: 1px; }
+[data-key].ok, .seg.ok { outline: 2px solid var(--good); outline-offset: 1px; }
+[data-key].err, .seg.err { outline: 2px solid var(--critical); outline-offset: 1px; }
+.locked [data-key], .locked .seg button { pointer-events: none; opacity: .55; }
+.curve { width: 100%; height: 90px; display: block; margin: 2px 0 6px; }
+.grid2 { display: block; }
+.wl { border-top: 1px solid var(--grid); padding-top: 6px; margin-top: 6px; }
+.wl:first-of-type { border-top: 0; margin-top: 0; }
+.wl .wlh { display: flex; justify-content: space-between; align-items: center; font-weight: 600; }
+.note { color: var(--text-secondary); font-size: 11.5px; margin-top: 2px; }
+.note:empty { display: none; }
+.maptabs { margin-bottom: 4px; }
+/* console */
+#cons { background: var(--surface-1); border: 1px solid var(--border); border-radius: 10px; padding: 8px 10px; height: 55vh; overflow: auto; white-space: pre; font: 11.5px/1.4 ui-monospace, Consolas, monospace; margin: 0 0 8px; }
+#cons .out { color: var(--accent); } #cons .err { color: var(--critical); }
+#cForm { display: flex; gap: 8px; } #cForm input { flex: 1; }
+@media (max-width: 700px) {
+  header { padding: 8px 10px; gap: 8px 10px; }
+  main { padding: 10px 10px 40px; }
+  .setbar { position: static; }
+  .tiles { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
+  .tile .tv { font-size: 26px; } .tile.big .tv { font-size: 40px; }
+  #cons { height: 50vh; }
+}
+#toast { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); background: var(--text-primary); color: var(--surface-1);
+  padding: 7px 14px; border-radius: 8px; font-size: 12px; display: none; z-index: 40; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Palta Boost</h1>
+  <button class="btn primary" id="bConn">Connect</button>
+  <span class="pill" id="btPill" data-s="off"><i></i><span id="btText">Not connected</span></span>
+  <nav class="tabs" id="tabs">
+    <button data-tab="live">Live</button><button data-tab="charts" class="on">Charts</button><button data-tab="settings">Settings</button><button data-tab="console">Console</button>
+  </nav>
+</header>
+<main>
+  <div id="banner" class="banner" style="display:none"></div>
+
+  <!-- ===== LIVE ===== -->
+  <section class="tab" id="tab-live">
+    <div class="live-top" id="liveTop"><span class="hint" style="margin:0">No live data yet. Press <b>Connect</b> and choose “PaltaBoost”. The first time the phone asks for the passkey.</span></div>
+    <div id="liveBox"><div class="tiles" id="tiles"></div></div>
+    <div class="linkinfo" id="linkinfo"></div>
+  </section>
+
+  <!-- ===== CHARTS (also the log viewer) ===== -->
+  <section class="tab on" id="tab-charts">
+    <div class="toolbar">
+      <label class="btn">Open log…<input id="file" type="file" accept=".txt,.log,.csv,text/plain" hidden></label>
+      <button class="btn" id="bReset" disabled title="Show the whole log (double-click a chart)">Reset zoom</button>
+      <button class="btn" id="bStats" disabled title="Min / avg / max of every value in the shown time range">Stats</button>
+      <button class="btn" id="bCsv" disabled title="Copy the E values as CSV (for Excel)">Copy CSV</button>
+      <button class="btn" id="bFollow" disabled title="Keep showing the newest data of the live session">Follow live</button>
+      <select id="selWin" title="Time window while following"><option value="30">30 s</option><option value="60" selected>60 s</option><option value="120">2 min</option><option value="300">5 min</option><option value="0">All</option></select>
+      <button class="btn" id="bSaveLog" disabled title="Download everything received from the device as a .txt log">Save log</button>
+      <button class="btn" id="bCopyLog" disabled title="Copy the received log text (when downloads do not work, e.g. in Bluefy)">Copy log</button>
+    </div>
+    <div class="hint" id="info">No log loaded.</div>
+    <div id="drop">
+      <b>Drop a Serial log (.txt) here</b>, use <i>Open log…</i>, or press <b>Connect</b> for live data from the device.<br>
+      Files never leave your phone or computer: they are read by this page only.
+      <ul>
+        <li>Reads the <b>E</b> lines (engine, boost, duty, warnings), the <b>C</b> blocks (CAN statistics) and the <b>S</b> lines (loop, heap).</li>
+        <li>Time axis: the <code>t:</code> field of the firmware, or the Arduino IDE timestamps (<code>12:16:01.123 -&gt;</code>), or estimated from the S lines.</li>
+        <li>A live session can be saved with <b>Save log</b> and opened here again later.</li>
+      </ul>
+    </div>
+    <div id="ui" style="display:none">
+      <p class="hint">Drag on a chart = zoom in · double-click = whole log · <kbd>←</kbd><kbd>→</kbd> pan · <kbd>+</kbd><kbd>−</kbd> zoom · drag the strip below to move the window · click a legend name to hide / show it. Red bands = FAIL / limit 2 (valve forced to 0 %).</p>
+      <div class="chips" id="chips"></div>
+      <div id="stats"></div>
+      <div class="panel" id="nav"></div>
+      <div id="charts"></div>
+      <details id="settingsBox" style="display:none"><summary>Settings snapshot from the log (command <b>i</b>)</summary><pre id="settings"></pre></details>
+    </div>
+  </section>
+
+  <!-- ===== SETTINGS ===== -->
+  <section class="tab" id="tab-settings">
+    <div class="setbar">
+      <span id="setState" class="hint" style="margin:0">Connect to read the settings from the device.</span>
+      <button class="btn" id="bReload" disabled>Reload</button>
+      <button class="btn primary" id="bSave" disabled title="Write the changes to the device flash (like leaving a settings screen)">Save to device</button>
+    </div>
+    <div id="lockBanner" class="banner warn" style="display:none"></div>
+    <div id="setBody"></div>
+  </section>
+
+  <!-- ===== CONSOLE ===== -->
+  <section class="tab" id="tab-console">
+    <div class="toolbar">
+      <label class="hint" style="margin:0">E period <select id="cPeriod"><option value="50">50 ms</option><option value="100">100 ms</option><option value="200" selected>200 ms</option><option value="500">500 ms</option><option value="1000">1 s</option></select></label>
+      <label class="hint" style="margin:0"><input type="checkbox" id="cE" checked> E lines</label>
+      <label class="hint" style="margin:0"><input type="checkbox" id="cC" checked> CAN + system</label>
+      <button class="btn" id="bInfo">Settings snapshot (i)</button>
+      <button class="btn" id="bRst">Reset CAN totals (r)</button>
+      <button class="btn" id="bClr">Clear</button>
+    </div>
+    <pre id="cons"></pre>
+    <form id="cForm"><input type="text" id="cIn" placeholder="command for the device, e.g.  G   or   S b.freq 35" autocomplete="off"><button class="btn primary">Send</button></form>
+  </section>
+</main>
+<div class="tip" id="tip"></div>
+<div id="toast"></div>
+
+<script>
+"use strict";
+// PARSER-START
+// ============================================================
+//  Parser: Serial text -> datasets { x: seconds[], c: { key: number[] } }
+// ============================================================
+const PIDS = ["RPM", "SPEED", "BOOST", "COOLNT", "AFR", "EGT", "IAT"];
+const MAPS = ["OFF", "STREET", "SPORT", "RACE"];
+const WL_NAMES = ["RPM", "Speed", "Coolant", "Boost", "AFR", "EGT", "Oil press", "Oil temp", "IAT"];
+const STEP_ORDER = ["FF", "FC", "CF1", "CF2", "CF3", "CF4", "CF5", "CF6", "CF7", "CF8", "done"];
+const TO_ORDER = ["FF", "FC", "CF1", "CF2", "CF3", "CF4", "CF5", "CF6", "CF7", "CF8", "seqErr", "stray"];
+const PLOT_KEYS = { oilTemp: "oilT", oilPress: "oilP", coolant: "clt", rpmMult: "xRpm", gearMult: "xGear", loopMs: "loopAvg" };
+
+function num(v) { if (v === undefined || v === "--" || v === "-") return NaN; const n = parseFloat(v); return isNaN(n) ? NaN : n; }
+function kvs(s) { const o = {}; const re = /([A-Za-z][\w/]*):(-?[\d.]+)/g; let m; while ((m = re.exec(s))) o[m[1]] = +m[2]; return o; }
+
+function parseE(L) {
+  const d = { pidOn: 0, warn: 0, fail: 0, alert: 0, rec: 0, limit2: 0 };
+  const toks = L.split(/\s+/);
+  for (let i = 1; i < toks.length; i++) {
+    const tk = toks[i];
+    if (!tk || tk === "|") continue;
+    const ci = tk.indexOf(":");
+    if (ci > 0) {
+      const k = tk.slice(0, ci), v = tk.slice(ci + 1);
+      if (k === "wl") { d.wl = v; continue; }
+      if (k === "loop") { const m = /^([\d.]+)\/([\d.]+)ms/.exec(v); if (m) { d.loopAvg = +m[1]; d.loopMax = +m[2]; } continue; }
+      d[k] = num(v);
+    } else if (tk === "PID") d.pidOn = 1;
+    else if (tk === "WARN") d.warn = 1;
+    else if (tk === "FAIL") d.fail = 1;
+    else if (/^ALERT\d/.test(tk)) d.alert = +tk.slice(5);
+    else if (/^REC\d*$/.test(tk)) d.rec = 1;
+    else if (tk.startsWith("LIMIT2")) d.limit2 = 1;
+    else if (MAPS.includes(tk)) d.map = MAPS.indexOf(tk);
+  }
+  if (d.rpm === undefined) return null;
+  if (d.pid !== undefined) d.pidTrim = -d.pid;
+  return d;
+}
+
+function parsePlotter(L) {
+  const d = {};
+  for (const part of L.split(",")) {
+    const ci = part.indexOf(":"); if (ci < 1) continue;
+    const k = part.slice(0, ci).trim();
+    d[PLOT_KEYS[k] || k] = num(part.slice(ci + 1));
+  }
+  if (d.warnMask !== undefined) { d.wlMask = d.warnMask; d.lMask = d.limitMask || 0; d.limit2 = d.lMask ? 1 : 0; }
+  return d.rpm === undefined ? null : d;
+}
+
+function newC(L) {
+  const c = { mode: /MULTI PID/.test(L) ? "multi" : /SINGLE PID/.test(L) ? "single" : /SILENCE/.test(L) ? "silence" : /PAUSED/.test(L) ? "paused" : "?",
+              head: kvs(L), pid: {}, steps: {}, to: {}, mvar: {} };
+  const m = /txFail\/s:\d+\((\d+)\)/.exec(L); if (m) c.head.txFailTot = +m[1];
+  const b = /CAN (\d+)k/.exec(L); if (b) c.baud = +b[1];
+  c.t = c.head.t;
+  return c;
+}
+
+function parseCLine(c, L) {
+  let m;
+  if ((m = /^C (RPM|SPEED|BOOST|COOLNT|AFR|EGT|IAT)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)\s+(\S+)/.exec(L))) {
+    const lat = m[8].split("/");
+    c.pid[m[1]] = { req: +m[2], ok: +m[3], vr: +m[4], to: +m[5], toMin: +m[6], toTot: +m[7], latAvg: num(lat[0]), latMin: num(lat[1]), latMax: num(lat[2]) };
+  } else if (L.startsWith("C total")) {
+    Object.assign(c.head, { varTot: kvs(L)["var/s"], late: kvs(L)["late/s"] });
+  } else if (L.startsWith("C multi")) {
+    const o = kvs(L); c.multi = o;
+    const lt = /lastTimeout:(\w+)/.exec(L); if (lt) c.lastTimeout = lt[1];
+  } else if (L.startsWith("C var/s")) {
+    c.mvar = kvs(L.slice(7));
+  } else if (L.startsWith("C t(us)")) {
+    c.tcols = L.slice(7).trim().split(/\s+/);
+  } else if ((m = /^C (last|avg 1s|min 1s|max 1s)\s+(.*)$/.exec(L)) && c.tcols) {
+    const vals = m[2].trim().split(/\s+/), row = m[1].split(" ")[0];
+    c.tcols.forEach((name, i) => { (c.steps[name] = c.steps[name] || {})[row] = num(vals[i]); });
+  } else if (L.startsWith("C timeout")) {
+    c.tocols = L.slice(9).trim().split(/\s+/);
+  } else if ((m = /^C\s+(\/s|\/min|total)\s+(.*)$/.exec(L)) && c.tocols) {
+    const vals = m[2].trim().split(/\s+/), row = m[1] === "/s" ? "s" : m[1] === "/min" ? "min" : "tot";
+    c.tocols.forEach((name, i) => { (c.to[name] = c.to[name] || {})[row] = num(vals[i]); });
+  }
+}
+
+function parseS(L) {
+  const s = {}; let m;
+  if ((m = /up:(\d+)s/.exec(L))) s.up = +m[1];
+  if ((m = /loop avg\/max:(\d+)\/(\d+)us/.exec(L))) { s.loopAvg = m[1] / 1000; s.loopMax = m[2] / 1000; }
+  if ((m = /maxEver:(\d+)us/.exec(L))) s.maxEver = m[1] / 1000;
+  if ((m = /loops\/s:(\d+)/.exec(L))) s.loops = +m[1];
+  if ((m = /slow:(\d+)/.exec(L))) s.slow = +m[1];
+  if ((m = /heap:(\d+)\/(\d+)/.exec(L))) { s.heap = m[1] / 1024; s.heapMin = m[2] / 1024; }
+  if ((m = /wheelHz:([\d.]+)/.exec(L))) s.wheelHz = +m[1];
+  if ((m = /dbgCost:(\d+)us/.exec(L))) s.dbgCost = +m[1];
+  if ((m = /drop:(\d+)/.exec(L))) s.drop = +m[1];
+  return s;
+}
+
+// ---- datasets: { x: seconds[], c: { key: number[] } }. One function per record type, used by files AND the live stream ----
+function newLogData() {
+  const mk = () => ({ x: [], c: {} });
+  return { E: mk(), CS: mk(), CM: mk(), S: mk(), modes: new Set(), wlSeen: new Array(9).fill(0) };
+}
+function dsPut(ds, k, n, v) { const a = ds.c[k] || (ds.c[k] = []); while (a.length < n) a.push(NaN); a.push(v === undefined ? NaN : v); }
+function dsClose(ds) { const n = ds.x.length; for (const k in ds.c) while (ds.c[k].length < n) ds.c[k].push(NaN); return ds; }
+
+function pushE(D, x, d) {
+  const E = D.E, n = E.x.length; E.x.push(x);
+  for (const k in d) if (typeof d[k] === "number" && k !== "t" && k !== "pid") dsPut(E, k, n, d[k]);
+  if (d.wl) for (let p = 0; p < 9; p++) {
+    const ch = d.wl[p]; const v = ch === "L" ? 2 : ch === "w" ? 1 : ch === "-" ? NaN : 0;
+    if (v > 0) D.wlSeen[p] = 1; dsPut(E, "wl" + p, n, v);
+  } else if (d.wlMask !== undefined) for (let p = 0; p < 9; p++) {
+    const v = (d.lMask >> p) & 1 ? 2 : (d.wlMask >> p) & 1 ? 1 : 0; if (v) D.wlSeen[p] = 1; dsPut(E, "wl" + p, n, v);
+  }
+}
+
+function pushC(D, x, c) {
+  const CS = D.CS, CM = D.CM;
+  D.modes.add(c.mode);
+  if (c.mode === "single") {
+    const n = CS.x.length; CS.x.push(x);
+    let req = 0, ok = 0, to = 0, toMin = 0;
+    for (const p of PIDS) {
+      const v = c.pid[p]; if (!v) continue;
+      dsPut(CS, "var_" + p, n, v.vr); dsPut(CS, "to_" + p, n, v.to); dsPut(CS, "toMin_" + p, n, v.toMin);
+      dsPut(CS, "lat_" + p, n, v.latAvg); dsPut(CS, "latMax_" + p, n, v.latMax); dsPut(CS, "latMin_" + p, n, v.latMin);
+      req += v.req; ok += v.ok; to += v.to; toMin += v.toMin;
+    }
+    dsPut(CS, "req", n, req); dsPut(CS, "ok", n, ok); dsPut(CS, "to", n, to); dsPut(CS, "toMin", n, toMin);
+    dsPut(CS, "late", n, c.head.late); dsPut(CS, "rx", n, c.head["rx/s"]); dsPut(CS, "other", n, c.head["other/s"]); dsPut(CS, "txFail", n, c.head["txFail/s"]);
+    dsPut(CS, "varTot", n, c.head.varTot);
+  } else if (c.mode === "multi" && c.multi) {
+    const n = CM.x.length; CM.x.push(x);
+    const o = c.multi;
+    dsPut(CM, "req", n, o["req/s"]); dsPut(CM, "ok", n, o["ok/s"]); dsPut(CM, "bad", n, o["bad/s"]); dsPut(CM, "varTot", n, o["var/s"]);
+    dsPut(CM, "len", n, o.len); dsPut(CM, "cf", n, o.CF); dsPut(CM, "reqTx", n, o.reqTx);
+    dsPut(CM, "rx", n, c.head["rx/s"]); dsPut(CM, "other", n, c.head["other/s"]); dsPut(CM, "txFail", n, c.head["txFail/s"]);
+    for (const p of PIDS) if (c.mvar[p] !== undefined) dsPut(CM, "var_" + p, n, c.mvar[p]);
+    for (const st in c.steps) for (const row in c.steps[st]) dsPut(CM, "st_" + row + "_" + st, n, c.steps[st][row]);
+    for (const st in c.to) { dsPut(CM, "to_" + st, n, c.to[st].s); dsPut(CM, "toMin_" + st, n, c.to[st].min); dsPut(CM, "toTot_" + st, n, c.to[st].tot); }
+  }
+}
+
+function pushS(D, x, d) {
+  const S = D.S, n = S.x.length; S.x.push(x);
+  for (const k in d) if (k !== "up") dsPut(S, k, n, d[k]);
+}
+
+function parseLog(text) {
+  const lines = text.split(/\r?\n/);
+  const recs = [];                     // { k: "E" | "C" | "S" | "R", clk, dev, d }
+  const clkRe = /^(\d{1,2}):(\d{2}):(\d{2})[.,](\d{1,3})\s*->\s?/;
+  let cur = null, hasT = false, hasClk = 0, unparsed = 0, plotter = 0;
+  const settings = [];
+  for (let i = 0; i < lines.length; i++) {
+    let L = lines[i], clk = null;
+    const m = clkRe.exec(L);
+    if (m) { clk = ((+m[1] * 60 + +m[2]) * 60 + +m[3]) * 1000 + +m[4].padEnd(3, "0"); L = L.slice(m[0].length); hasClk++; }
+    L = L.replace(/\s+$/, "");
+    if (!L.trim()) continue;
+    if (L.startsWith("E ")) {
+      const d = parseE(L);
+      if (d) { if (!isNaN(d.t)) hasT = true; recs.push({ k: "E", clk, dev: d.t, d }); } else unparsed++;
+    } else if (/^rpm:-?\d/.test(L)) {
+      const d = parsePlotter(L); if (d) { recs.push({ k: "E", clk, dev: undefined, d }); plotter++; } else unparsed++;
+    } else if (L.startsWith("C ")) {
+      if (L.startsWith("C ---- CAN")) { cur = newC(L); if (cur.t !== undefined) hasT = true; recs.push({ k: "C", clk, dev: cur.t, d: cur }); }
+      else if (cur) parseCLine(cur, L);
+    } else if (L.startsWith("S ")) {
+      const d = parseS(L);
+      const dev = cur && cur.t !== undefined ? cur.t : (d.up !== undefined ? d.up * 1000 : undefined);
+      recs.push({ k: "S", clk, dev, d, upOnly: !(cur && cur.t !== undefined) });
+      if (cur) cur.s = d;
+      cur = null;
+    } else if (L.includes("PALTA BOOST CONTROL")) {
+      recs.push({ k: "R", clk, dev: 0 });
+    } else if (L.startsWith("I ")) {
+      if (L.startsWith("I ---- SETTINGS")) settings.length = 0;
+      settings.push(L.slice(2));
+    } else unparsed++;
+  }
+
+  // ---- time of every record ----
+  const source = hasT ? "device t: (ms)" : hasClk > recs.length / 2 ? "PC timestamps" : "estimated from the S lines";
+  const useClk = !hasT && hasClk > recs.length / 2;
+  const T = new Array(recs.length).fill(NaN);
+  const reboots = [];
+  let offset = 0, prev = -Infinity;
+  for (let i = 0; i < recs.length; i++) {
+    const r = recs[i];
+    if (r.k === "R") { if (!useClk && prev > -Infinity) { offset = prev + 1000; prev = -Infinity; reboots.push(i); } continue; }
+    let raw = useClk ? r.clk : r.dev;
+    if (raw === undefined || raw === null || isNaN(raw)) continue;
+    if (useClk) { if (prev > -Infinity && raw + offset < prev - 3600e3) offset += 86400e3; }   // midnight
+    else if (prev > -Infinity && raw + offset < prev - 1500) { offset = prev + 1000 - raw; reboots.push(i); }   // restart without the start line
+    const t = raw + offset;
+    if (!useClk && r.upOnly && prev > -Infinity && Math.abs(t - prev) < 1000) { prev = Math.max(prev, t); continue; }   // up: has only 1 s resolution: used only as a coarse anchor
+    T[i] = t; prev = Math.max(prev, t);
+  }
+  // records without a time: straight line between the two known neighbours (by record number)
+  const known = []; for (let i = 0; i < recs.length; i++) if (!isNaN(T[i])) known.push(i);
+  if (known.length === 0) { for (let i = 0; i < recs.length; i++) T[i] = i * 200; }
+  else {
+    let step = 200;
+    if (known.length >= 2) { const a = known[0], b = known[known.length - 1]; if (b > a) step = Math.max(1, (T[b] - T[a]) / (b - a)); }
+    for (let i = 0; i < known[0]; i++) T[i] = T[known[0]] - (known[0] - i) * step;
+    for (let j = 0; j + 1 < known.length; j++) {
+      const a = known[j], b = known[j + 1];
+      for (let i = a + 1; i < b; i++) T[i] = T[a] + (T[b] - T[a]) * (i - a) / (b - a);
+    }
+    const last = known[known.length - 1];
+    for (let i = last + 1; i < recs.length; i++) T[i] = T[last] + (i - last) * step;
+  }
+  const t0 = recs.length ? Math.min(...T.filter(v => !isNaN(v)).slice(0, 50)) : 0;
+
+  // ---- datasets ----
+  const D = newLogData();
+  for (let i = 0; i < recs.length; i++) {
+    const r = recs[i], x = (T[i] - t0) / 1000;
+    if (r.k === "E") pushE(D, x, r.d);
+    else if (r.k === "C") pushC(D, x, r.d);
+    else if (r.k === "S") pushS(D, x, r.d);
+  }
+  const { E, CS, CM, S, modes, wlSeen } = D;
+  [E, CS, CM, S].forEach(dsClose);
+  const all = [E, CS, CM, S].filter(d => d.x.length);
+  const xmin = all.length ? Math.min(...all.map(d => d.x[0])) : 0;
+  const xmax = all.length ? Math.max(...all.map(d => d.x[d.x.length - 1])) : 1;
+  return { E, CS, CM, S, source, useClk, clkBase: useClk ? t0 : null, reboots: reboots.map(i => (T[i] - t0) / 1000),
+           xmin, xmax: xmax > xmin ? xmax : xmin + 1, unparsed, plotter, modes: [...modes], wlSeen, settings, lines: lines.length };
+}
+// PARSER-END
+
+if (typeof module !== "undefined") module.exports = { parseLog, newLogData, pushE, pushC, pushS, parseE, newC, parseCLine, parseS };
+</script>
+
+<script>
+"use strict";
+if (typeof document !== "undefined") (function () {
+// ============================================================
+//  Charts
+// ============================================================
+const $ = id => document.getElementById(id);
+let LOG = null, fileName = "";
+const view = { x0: 0, x1: 1 };
+let cursorX = null;
+const charts = [];
+let failBands = [];
+const css = () => getComputedStyle(document.documentElement);
+const cv = n => css().getPropertyValue(n).trim();
+const SERIES = ["--s1", "--s2", "--s3", "--s4", "--s5", "--s6", "--s7", "--s8"];
+
+// ---- panels: one unit per chart (no second y axis) ----
+function panelDefs(L) {
+  const E = L.E, CS = L.CS, CM = L.CM, S = L.S;
+  const P = [];
+  const s = (key, label, dec, extra) => Object.assign({ key, label, dec }, extra || {});
+  P.push({ id: "rpm", group: "Engine", title: "Engine RPM", unit: "rpm", ds: E, series: [s("rpm", "RPM", 0)] });
+  P.push({ id: "boost", group: "Engine", title: "Boost", unit: "bar", ds: E, series: [s("boost", "Boost", 2)] });
+  P.push({ id: "speed", group: "Engine", title: "Speed", unit: "km/h", ds: E, series: [s("speed", "Speed", 0)] });
+  P.push({ id: "gear", group: "Engine", title: "Gear", unit: "0 = unknown", ds: E, series: [s("gear", "Gear", 0, { step: true })], yMin: 0, yMax: 5 });
+  P.push({ id: "temps", group: "Engine", title: "Temperatures", unit: "°C", ds: E, series: [s("oilT", "Oil temp", 0), s("clt", "Coolant", 0), s("iat", "Intake air", 0)] });
+  P.push({ id: "oilP", group: "Engine", title: "Oil pressure", unit: "bar", ds: E, series: [s("oilP", "Oil press", 2)] });
+  P.push({ id: "egt", group: "Engine", title: "EGT", unit: "°C", ds: E, series: [s("egt", "EGT", 0)] });
+  P.push({ id: "afr", group: "Engine", title: "Air fuel ratio", unit: "AFR", ds: E, series: [s("afr", "AFR", 2)] });
+  P.push({ id: "duty", group: "Boost ctrl", title: "MAC valve duty", unit: "%", ds: E,
+           series: [s("base", "Base (map)", 1), s("mapDuty", "Map duty ×rpm ×gear", 1), s("pidTrim", "PID trim", 1), s("macDuty", "MAC duty (out)", 1)] });
+  P.push({ id: "mult", group: "Boost ctrl", title: "Correction multipliers", unit: "%", ds: E, series: [s("xRpm", "RPM mult", 0), s("xGear", "Gear mult", 0)] });
+  P.push({ id: "hz", group: "Boost ctrl", title: "Valve PWM frequency", unit: "Hz", ds: E, series: [s("hz", "Valve Hz", 2)] });
+  const lanes = [s("pidOn", "PID active", 0, { color: "--s1" }), s("warn", "Boost WARN", 0, { color: "--warning" }), s("fail", "Boost FAIL", 0, { color: "--critical" }),
+                 s("alert", "Alert popup", 0, { levels: true }), s("limit2", "Limit 2", 0, { color: "--critical" }), s("rec", "Logger REC", 0, { color: "--s6" })];
+  for (let p = 0; p < 9; p++) if (L.wlSeen[p]) lanes.push(s("wl" + p, "W&L " + WL_NAMES[p], 0, { levels: true }));
+  P.push({ id: "flags", group: "Boost ctrl", title: "Warning / limit flags", unit: "amber = warning, red = limit", ds: E, series: lanes, lanes: true });
+
+  const loopDs = S.x.length ? S : E;
+  P.push({ id: "loop", group: "System", title: "Loop time", unit: "ms (per second)", ds: loopDs, series: [s("loopAvg", "Average", 2), s("loopMax", "Max", 1)] });
+  P.push({ id: "slow", group: "System", title: "Slow loops", unit: "per second", ds: S, series: [s("slow", "Slow loops (≥8 ms)", 0)] });
+  P.push({ id: "loops", group: "System", title: "Loop passes", unit: "per second", ds: S, series: [s("loops", "Loops/s", 0)] });
+  P.push({ id: "heap", group: "System", title: "Free heap", unit: "KB", ds: S, series: [s("heap", "Free", 1), s("heapMin", "Lowest ever", 1)] });
+  P.push({ id: "dbg", group: "System", title: "Serial debug cost", unit: "µs, worst per second", ds: S, series: [s("dbgCost", "Build time", 0)] });
+
+  const pidSeries = (pre, dec) => PIDS.map((p, i) => s(pre + p, p, dec || 0));
+  P.push({ id: "sVar", group: "CAN single", title: "Values refreshed (single PID)", unit: "per second", ds: CS, series: pidSeries("var_") });
+  P.push({ id: "sReq", group: "CAN single", title: "Requests / answers (single PID)", unit: "per second", ds: CS,
+           series: [s("req", "Requests", 0), s("ok", "Answered", 0), s("to", "Timeouts", 0), s("late", "Late answers", 0), s("rx", "Frames rx", 0), s("other", "Other ECU", 0), s("txFail", "TX fail", 0)] });
+  P.push({ id: "sTo", group: "CAN single", title: "Timeouts per PID", unit: "per second", ds: CS, series: pidSeries("to_") });
+  P.push({ id: "sToMin", group: "CAN single", title: "Timeouts per PID", unit: "per last minute", ds: CS, series: pidSeries("toMin_") });
+  P.push({ id: "sLat", group: "CAN single", title: "Answer latency, average", unit: "µs from request", ds: CS, series: pidSeries("lat_") });
+  P.push({ id: "sLatMax", group: "CAN single", title: "Answer latency, max", unit: "µs from request", ds: CS, series: pidSeries("latMax_") });
+
+  const stepsPresent = STEP_ORDER.filter(st => CM.c["st_avg_" + st]);
+  const stepSeries = row => stepsPresent.map(st => s("st_" + row + "_" + st, st === "done" ? "Done" : st, 0));
+  P.push({ id: "mVar", group: "CAN multi", title: "Values refreshed (multi PID)", unit: "per second", ds: CM, series: pidSeries("var_") });
+  P.push({ id: "mReq", group: "CAN multi", title: "Requests / answers (multi PID)", unit: "per second", ds: CM,
+           series: [s("req", "Requests", 0), s("ok", "Complete", 0), s("bad", "Bad answer", 0), s("rx", "Frames rx", 0), s("other", "Other ECU", 0), s("txFail", "TX fail", 0)] });
+  P.push({ id: "mSteps", group: "CAN multi", title: "Multi frame timeline, average", unit: "µs from the request (0)", ds: CM, series: stepSeries("avg") });
+  P.push({ id: "mStepsMax", group: "CAN multi", title: "Multi frame timeline, max", unit: "µs from the request (0)", ds: CM, series: stepSeries("max") });
+  P.push({ id: "mStepsLast", group: "CAN multi", title: "Multi frame timeline, last answer", unit: "µs from the request (0)", ds: CM, series: stepSeries("last") });
+  // timeout steps: FF, FC, CF1, CF2 always, the others only if they ever happened (max 8 lines)
+  const toPresent = TO_ORDER.filter(st => CM.c["to_" + st] && (["FF", "FC", "CF1", "CF2", "seqErr"].includes(st) || CM.c["toTot_" + st].some(v => v > 0))).slice(0, 8);
+  P.push({ id: "mTo", group: "CAN multi", title: "Timeouts per multi frame step", unit: "per second", ds: CM, series: toPresent.map(st => s("to_" + st, st, 0)) });
+  P.push({ id: "mToMin", group: "CAN multi", title: "Timeouts per multi frame step", unit: "per last minute", ds: CM, series: toPresent.map(st => s("toMin_" + st, st, 0)) });
+
+  for (const p of P) {
+    if (p.ds !== E || p.id === "loop") {                    // per second counts / times: start at 0; counts drawn as steps
+      p.zero = true;
+      if (!/µs|ms|KB/.test(p.unit)) p.series.forEach(se => se.step = true);
+    }
+    p.series = p.series.filter(se => p.ds.c[se.key] && p.ds.c[se.key].some(v => !isNaN(v)));
+    if (!p.lanes) p.series.forEach((se, i) => { if (!se.color) se.color = SERIES[i % 8]; });
+    p.available = p.ds.x.length > 1 && p.series.length > 0;
+  }
+  return P;
+}
+
+const DEFAULT_ON = ["rpm", "boost", "duty", "mult", "gear", "flags", "temps", "oilP", "loop", "sVar", "sTo", "sLat", "mVar", "mSteps", "mTo"];
+let shown = new Set(DEFAULT_ON);
+try { const v = JSON.parse(localStorage.getItem("pbv_shown") || "null"); if (Array.isArray(v)) shown = new Set(v); } catch (e) {}
+const saveShown = () => { try { localStorage.setItem("pbv_shown", JSON.stringify([...shown])); } catch (e) {} };
+
+// ---- helpers ----
+function lowerBound(a, x) { let lo = 0, hi = a.length; while (lo < hi) { const m = (lo + hi) >> 1; if (a[m] < x) lo = m + 1; else hi = m; } return lo; }
+function nearest(a, x) {
+  if (!a.length) return -1;
+  const i = lowerBound(a, x);
+  if (i <= 0) return 0; if (i >= a.length) return a.length - 1;
+  return x - a[i - 1] <= a[i] - x ? i - 1 : i;
+}
+function niceTicks(lo, hi, n, minStep) {
+  for (let tries = 0; tries < 4; tries++, n += 2) {          // at least 2 labels
+    const span = hi - lo || 1, raw = span / n, mag = Math.pow(10, Math.floor(Math.log10(raw)));
+    let st = [1, 2, 2.5, 5, 10].map(k => k * mag).find(k => k >= raw) || 10 * mag;
+    if (minStep && st < minStep) st = minStep;
+    const out = []; for (let v = Math.ceil(lo / st) * st; v <= hi + st * 1e-9; v += st) out.push(+v.toFixed(10));
+    if (out.length >= 2 || tries === 3) return { ticks: out, step: st };
+  }
+}
+function fmtTime(s, withMs, isSpan) {
+  const clock = LOG && LOG.useClk && !isSpan;
+  if (clock) s = s + LOG.clkBase / 1000;
+  const neg = s < 0; s = Math.abs(s);
+  const h = Math.floor(s / 3600), m = Math.floor(s / 60) % 60, sec = s % 60;
+  const ss = withMs ? sec.toFixed(sec < 10 ? 2 : 2).padStart(5, "0") : Math.floor(sec).toString().padStart(2, "0");
+  return (neg ? "-" : "") + (h || clock ? h + ":" + String(m).padStart(2, "0") : m) + ":" + ss;
+}
+function fmtVal(v, dec) { return isNaN(v) ? "–" : v.toFixed(dec); }
+function fmtTick(v, step) { const d = step >= 1 ? 0 : Math.min(3, Math.ceil(-Math.log10(step))); return Math.abs(v) >= 10000 ? (v / 1000).toFixed(v % 1000 ? 1 : 0) + "k" : v.toFixed(d); }
+
+// ============================================================
+//  One chart panel
+// ============================================================
+const PAD_L = 92, PAD_R = 10, PAD_T = 6, PAD_B = 18;
+class Chart {
+  constructor(def, host, isNav) {
+    this.def = def; this.isNav = !!isNav;
+    this.hidden = new Set();
+    const el = document.createElement("div"); el.className = "panel"; el.dataset.id = def.id;
+    if (isNav) { el.className = ""; }
+    const head = document.createElement("div"); head.className = "phead";
+    head.innerHTML = `<span class="ptitle">${def.title}<small>${def.unit || ""}</small></span>`;
+    this.legs = [];
+    if (!def.lanes) def.series.forEach((se, i) => {
+      const lg = document.createElement("span"); lg.className = "leg";
+      lg.innerHTML = `<i style="background:var(${se.color})"></i>${se.label} <b>–</b>`;
+      if (!isNav) lg.onclick = () => { this.hidden.has(i) ? this.hidden.delete(i) : this.hidden.add(i); lg.classList.toggle("off"); this.draw(); this.drawOverlay(); };
+      head.appendChild(lg); this.legs.push(lg.querySelector("b"));
+    });
+    el.appendChild(head);
+    const wrap = document.createElement("div"); wrap.className = "cwrap";
+    this.cv = document.createElement("canvas"); this.ov = document.createElement("canvas"); this.ov.className = "ov";
+    wrap.appendChild(this.cv); wrap.appendChild(this.ov); el.appendChild(wrap);
+    if (!isNav) { this.box = document.createElement("div"); this.box.className = "ptip"; wrap.appendChild(this.box); }
+    host.appendChild(el); this.el = el;
+    this.h = isNav ? 54 : def.lanes ? Math.max(60, def.series.length * 17 + PAD_T + PAD_B) : (def.id === "gear" ? 96 : 140);
+    this.bindEvents();
+  }
+  layout() {
+    const w = this.cv.parentElement.clientWidth, dpr = window.devicePixelRatio || 1;
+    for (const c of [this.cv, this.ov]) { c.width = Math.round(w * dpr); c.height = Math.round(this.h * dpr); c.style.height = this.h + "px"; }
+    this.w = w; this.dpr = dpr; this.pw = w - PAD_L - PAD_R; this.ph = this.h - PAD_T - PAD_B;
+  }
+  get range() { return this.isNav ? { x0: LOG.xmin, x1: LOG.xmax } : view; }
+  xPx(x) { const r = this.range; return PAD_L + (x - r.x0) / (r.x1 - r.x0) * this.pw; }
+  pxX(px) { const r = this.range; return r.x0 + (px - PAD_L) / this.pw * (r.x1 - r.x0); }
+  yRange() {
+    const d = this.def;
+    if (d.yMin !== undefined && d.yMax !== undefined) return [d.yMin, d.yMax];
+    const xs = d.ds.x, r = this.range, i0 = Math.max(0, lowerBound(xs, r.x0) - 1), i1 = Math.min(xs.length, lowerBound(xs, r.x1) + 1);
+    let lo = Infinity, hi = -Infinity;
+    d.series.forEach((se, k) => {
+      if (this.hidden.has(k)) return;
+      const a = d.ds.c[se.key];
+      for (let i = i0; i < i1; i++) { const v = a[i]; if (v < lo) lo = v; if (v > hi) hi = v; }
+    });
+    if (!isFinite(lo)) { lo = 0; hi = 1; }
+    if (d.zero && lo > 0) lo = 0;
+    if (lo >= 0 && lo < (hi - lo) * 0.6) lo = 0;        // counts / duty: show the zero line
+    if (hi === lo) { hi += 1; lo -= lo > 0 ? 1 : 0; }
+    const pad = (hi - lo) * 0.06; return [lo === 0 ? 0 : lo - pad, hi + pad];
+  }
+  draw() {
+    const g = this.cv.getContext("2d"), d = this.def, dpr = this.dpr;
+    g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, this.w, this.h);
+    const r = this.range, grid = cv("--grid"), muted = cv("--text-muted");
+    g.font = "11px system-ui, sans-serif"; g.textBaseline = "middle";
+    // red bands: FAIL / limit 2
+    if (d.ds === LOG.E || d.ds === LOG.S || !this.isNav) {
+      g.fillStyle = cv("--band");
+      for (const [a, b] of failBands) { if (b < r.x0 || a > r.x1) continue; const xa = Math.max(PAD_L, this.xPx(a)), xb = Math.min(PAD_L + this.pw, this.xPx(b)); g.fillRect(xa, PAD_T, Math.max(1, xb - xa), this.ph); }
+    }
+    // x grid + labels
+    const xt = niceTicks(r.x0, r.x1, Math.max(2, Math.floor(this.pw / 110)));
+    const tickStep = [0.1, 0.2, 0.5, 1, 2, 5, 10, 15, 30, 60, 120, 300, 600, 900, 1800, 3600].find(k => k >= xt.step) || xt.step;
+    g.strokeStyle = grid; g.lineWidth = 1; g.fillStyle = muted; g.textAlign = "center";
+    for (let x = Math.ceil(r.x0 / tickStep) * tickStep; x <= r.x1; x += tickStep) {
+      const px = Math.round(this.xPx(x)) + 0.5;
+      g.beginPath(); g.moveTo(px, PAD_T); g.lineTo(px, PAD_T + this.ph); g.stroke();
+      g.fillText(fmtTime(x, tickStep < 1), px, this.h - PAD_B / 2 + 1);
+    }
+    // restarts
+    g.setLineDash([4, 4]); g.strokeStyle = muted;
+    for (const x of LOG.reboots) { if (x < r.x0 || x > r.x1) continue; const px = Math.round(this.xPx(x)) + 0.5; g.beginPath(); g.moveTo(px, PAD_T); g.lineTo(px, PAD_T + this.ph); g.stroke(); }
+    g.setLineDash([]);
+    if (d.lanes) return this.drawLanes(g);
+    // y grid + labels
+    const [y0, y1] = this.yR = this.yRange();
+    const intOnly = d.series.every(se => se.dec === 0);
+    const yt = niceTicks(y0, y1, this.isNav ? 1 : d.yMax !== undefined ? d.yMax - d.yMin : Math.max(2, Math.floor(this.ph / 34)), intOnly ? 1 : 0);
+    g.textAlign = "right";
+    for (const v of yt.ticks) {
+      const py = Math.round(this.yPx(v)) + 0.5;
+      g.strokeStyle = grid; g.beginPath(); g.moveTo(PAD_L, py); g.lineTo(PAD_L + this.pw, py); g.stroke();
+      if (!this.isNav) { g.fillStyle = muted; g.fillText(fmtTick(v, yt.step), PAD_L - 6, py); }
+    }
+    // series
+    g.save(); g.beginPath(); g.rect(PAD_L, PAD_T, this.pw, this.ph); g.clip();
+    d.series.forEach((se, k) => { if (!this.hidden.has(k)) this.drawSeries(g, se); });
+    g.restore();
+  }
+  yPx(v) { const [a, b] = this.yR; return PAD_T + (1 - (v - a) / (b - a)) * this.ph; }
+  drawSeries(g, se) {
+    const xs = this.def.ds.x, ys = this.def.ds.c[se.key], r = this.range;
+    const i0 = Math.max(0, lowerBound(xs, r.x0) - 1), i1 = Math.min(xs.length - 1, lowerBound(xs, r.x1));
+    g.strokeStyle = cv(se.color); g.lineWidth = this.isNav ? 1.25 : 2; g.lineJoin = "round"; g.lineCap = "round";
+    g.beginPath();
+    const n = i1 - i0 + 1;
+    if (n > this.pw * 2 && !se.step) {                    // many points: min / max per pixel column
+      let col = -1, mn = 0, mx = 0, started = false;
+      const flush = () => { if (col < 0) return; const px = PAD_L + col + 0.5; if (!started) { g.moveTo(px, this.yPx(mx)); started = true; } else g.lineTo(px, this.yPx(mx)); g.lineTo(px, this.yPx(mn)); };
+      for (let i = i0; i <= i1; i++) {
+        const v = ys[i]; if (isNaN(v)) continue;
+        const c = Math.floor(this.xPx(xs[i]) - PAD_L);
+        if (c !== col) { flush(); col = c; mn = mx = v; } else { if (v < mn) mn = v; if (v > mx) mx = v; }
+      }
+      flush();
+    } else {
+      let pen = false, lastY = 0;
+      const gap = this.gapLimit();
+      for (let i = i0; i <= i1; i++) {
+        const v = ys[i];
+        if (isNaN(v) || (i > i0 && xs[i] - xs[i - 1] > gap)) { pen = false; if (isNaN(v)) continue; }
+        const px = this.xPx(xs[i]), py = this.yPx(v);
+        if (!pen) { g.moveTo(px, py); pen = true; }
+        else if (se.step) { g.lineTo(px, lastY); g.lineTo(px, py); }
+        else g.lineTo(px, py);
+        lastY = py;
+      }
+    }
+    g.stroke();
+  }
+  gapLimit() { const xs = this.def.ds.x; if (this._gap === undefined) { const n = Math.min(xs.length - 1, 200); let s = 0; for (let i = 1; i <= n; i++) s += xs[i] - xs[i - 1]; this._gap = Math.max(3, (n > 0 ? s / n : 1) * 8); } return this._gap; }
+  drawLanes(g) {
+    const d = this.def, xs = d.ds.x, r = this.range, lh = 17;
+    const i0 = Math.max(0, lowerBound(xs, r.x0) - 1), i1 = Math.min(xs.length - 1, lowerBound(xs, r.x1));
+    const lvl = [null, cv("--warning"), cv("--critical")];
+    g.textAlign = "left";
+    d.series.forEach((se, k) => {
+      const y = PAD_T + k * lh;
+      g.fillStyle = cv("--text-secondary"); g.textAlign = "right"; g.fillText(se.label.length > 14 ? se.label.slice(0, 13) + "…" : se.label, PAD_L - 6, y + lh / 2);
+      g.fillStyle = cv("--grid"); g.fillRect(PAD_L, y + lh / 2 - 0.5, this.pw, 1);
+      const ys = d.ds.c[se.key]; if (!ys) return;
+      let start = -1, level = 0;
+      const gap = this.gapLimit();
+      const end = (i) => {
+        if (start < 0) return;
+        const xa = this.xPx(xs[start]), xb = Math.max(xa + 2, this.xPx(xs[Math.min(i, xs.length - 1)]));
+        g.fillStyle = se.levels ? lvl[level] : cv(se.color);
+        g.beginPath(); g.roundRect ? g.roundRect(xa, y + 3, xb - xa, lh - 6, 3) : g.rect(xa, y + 3, xb - xa, lh - 6); g.fill();
+        start = -1;
+      };
+      for (let i = i0; i <= i1; i++) {
+        const v = ys[i] > 0 ? (se.levels ? Math.min(2, ys[i]) : 1) : 0;
+        if (start >= 0 && (v !== level || xs[i] - xs[i - 1] > gap)) end(i);
+        if (v > 0 && start < 0) { start = i; level = v; }
+      }
+      end(i1);
+    });
+  }
+  drawOverlay(selA, selB) {
+    const g = this.ov.getContext("2d"), dpr = this.dpr;
+    g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, this.w, this.h);
+    if (this.isNav) {                                       // the window being viewed
+      const a = this.xPx(view.x0), b = this.xPx(view.x1);
+      g.fillStyle = cv("--sel"); g.fillRect(a, PAD_T, Math.max(2, b - a), this.ph);
+      g.strokeStyle = cv("--accent"); g.lineWidth = 1.5; g.strokeRect(a + 0.5, PAD_T + 0.5, Math.max(2, b - a) - 1, this.ph - 1);
+      return;
+    }
+    if (selA !== undefined) { g.fillStyle = cv("--sel"); g.fillRect(Math.min(selA, selB), PAD_T, Math.abs(selB - selA), this.ph); }
+    const d = this.def;
+    if (cursorX === null || cursorX < view.x0 || cursorX > view.x1) { this.legs.forEach(b => b.textContent = "–"); this.box.style.display = "none"; return; }
+    this.placeBox(selA !== undefined);
+    const px = Math.round(this.xPx(cursorX)) + 0.5;
+    g.strokeStyle = cv("--text-muted"); g.lineWidth = 1; g.beginPath(); g.moveTo(px, PAD_T); g.lineTo(px, PAD_T + this.ph); g.stroke();
+    const i = nearest(d.ds.x, cursorX);
+    const far = i < 0 || Math.abs(d.ds.x[i] - cursorX) > this.gapLimit();
+    if (d.lanes) return;
+    d.series.forEach((se, k) => {
+      const v = far ? NaN : d.ds.c[se.key][i];
+      this.legs[k].textContent = fmtVal(v, se.dec);
+      if (isNaN(v) || this.hidden.has(k)) return;
+      const x = this.xPx(d.ds.x[i]), y = this.yPx(v);
+      g.fillStyle = cv("--surface-1"); g.beginPath(); g.arc(x, y, 5, 0, 7); g.fill();
+      g.fillStyle = cv(se.color); g.beginPath(); g.arc(x, y, 3.5, 0, 7); g.fill();
+    });
+  }
+  placeBox(selecting) {
+    const h = selecting ? null : this.tipHtml(true);
+    if (!h) { this.box.style.display = "none"; return; }
+    const b = this.box; b.innerHTML = h; b.style.display = "block";
+    b.classList.toggle("two", b.querySelectorAll(".tr").length > 4);
+    const px = this.xPx(cursorX), w = b.offsetWidth;
+    b.style.left = (px + 12 + w > PAD_L + this.pw ? Math.max(PAD_L, px - 12 - w) : px + 12) + "px";
+  }
+  tipHtml(compact) {
+    const d = this.def, i = nearest(d.ds.x, cursorX);
+    if (i < 0 || Math.abs(d.ds.x[i] - cursorX) > this.gapLimit()) return null;
+    let h = `<div class="tt">${fmtTime(d.ds.x[i], true)}${compact ? "" : " · " + d.title}</div>`;
+    let rows = 0;
+    d.series.forEach((se, k) => {
+      const v = d.ds.c[se.key][i];
+      if (compact && d.lanes && !(v > 0)) return;          // flags: only the ones that are on
+      if (compact && this.hidden.has(k)) return;
+      rows++;
+      const val = d.lanes ? (v > 0 ? (se.levels ? (v >= 2 ? "LIMIT" : "warning") : "on") : (isNaN(v) ? "off (disabled)" : "–")) : fmtVal(v, se.dec);
+      const col = d.lanes ? (se.levels ? (v >= 2 ? "--critical" : "--warning") : se.color) : se.color;
+      h += `<div class="tr"><span><i style="background:var(${col})"></i>${se.label}</span><b>${val}</b></div>`;
+    });
+    if (compact && d.lanes && !rows) h += `<div class="tr"><span>no flag on</span></div>`;
+    return h;
+  }
+  bindEvents() {
+    const ov = this.ov;
+    let drag = null;
+    const pos = e => { const b = ov.getBoundingClientRect(); return e.clientX - b.left; };
+    ov.addEventListener("pointerdown", e => {
+      ov.setPointerCapture(e.pointerId);
+      const x = pos(e);
+      if (this.isNav) {
+        const a = this.xPx(view.x0), b = this.xPx(view.x1);
+        drag = (x >= a - 4 && x <= b + 4 && b - a < this.pw - 4) ? { mode: "pan", x, v0: view.x0, v1: view.x1 } : { mode: "sel", x };
+        ov.style.cursor = "grabbing";
+      } else drag = { mode: e.shiftKey ? "pan" : "sel", x, v0: view.x0, v1: view.x1 };
+    });
+    ov.addEventListener("pointermove", e => {
+      const x = pos(e);
+      if (drag && drag.mode === "pan") {
+        stopFollow();
+        const dx = (x - drag.x) / this.pw * (this.isNav ? (LOG.xmax - LOG.xmin) : -(drag.v1 - drag.v0));
+        setView(drag.v0 + dx, drag.v1 + dx, true); return;
+      }
+      if (drag && drag.mode === "sel") {
+        if (this.isNav) { this.drawOverlay(); const g = ov.getContext("2d"); g.fillStyle = cv("--sel"); g.fillRect(Math.min(drag.x, x), PAD_T, Math.abs(x - drag.x), this.ph); }
+        else { cursorX = this.pxX(x); charts.forEach(c => c.drawOverlay(c.xPx(this.pxX(drag.x)), c.xPx(cursorX))); }
+        return;
+      }
+      if (this.isNav) return;
+      cursorX = this.pxX(x); charts.forEach(c => c.drawOverlay());
+    });
+    ov.addEventListener("pointerup", e => {
+      if (!drag) return;
+      const x = pos(e);
+      if (drag.mode === "sel" && Math.abs(x - drag.x) > 5) {
+        stopFollow();
+        const a = this.pxX(Math.min(x, drag.x)), b = this.pxX(Math.max(x, drag.x)); setView(a, b);
+      } else if (drag.mode === "sel" && this.isNav) {               // click on the strip: centre the window there
+        stopFollow();
+        const c = this.pxX(x), half = (view.x1 - view.x0) / 2; setView(c - half, c + half);
+      } else if (drag.mode === "sel") {                             // tap (phone): show the values at that moment
+        cursorX = this.pxX(x);
+      }
+      drag = null; if (this.isNav) ov.style.cursor = "grab";
+      charts.forEach(c => c.drawOverlay());
+    });
+    ov.addEventListener("pointercancel", () => { drag = null; if (this.isNav) ov.style.cursor = "grab"; charts.forEach(c => c.drawOverlay()); });   // the page scrolled
+    ov.addEventListener("pointerleave", e => {
+      if (e.pointerType === "touch") return;                       // finger lifted: keep the values of the tap on screen
+      if (drag) return; if (!this.isNav) { cursorX = null; charts.forEach(c => c.drawOverlay()); } hideTip(); });
+    ov.addEventListener("dblclick", () => { stopFollow(); setView(LOG.xmin, LOG.xmax); });
+    ov.addEventListener("wheel", e => {
+      if (!(e.ctrlKey || e.altKey) && !this.isNav) return;     // plain wheel scrolls the page; Ctrl / Alt + wheel zooms
+      e.preventDefault();
+      stopFollow();
+      const c = this.isNav ? (view.x0 + view.x1) / 2 : this.pxX(pos(e)), f = e.deltaY > 0 ? 1.25 : 0.8;
+      setView(c - (c - view.x0) * f, c + (view.x1 - c) * f);
+    }, { passive: false });
+  }
+}
+
+function showTip(chart, e) {
+  const h = chart.tipHtml(), tip = $("tip");
+  if (!h) { hideTip(); return; }
+  tip.innerHTML = h; tip.style.display = "block";
+  const w = tip.offsetWidth, ht = tip.offsetHeight;
+  let x = e.clientX + 16, y = e.clientY + 14;
+  if (x + w > innerWidth - 8) x = e.clientX - w - 16;
+  if (y + ht > innerHeight - 8) y = e.clientY - ht - 10;
+  tip.style.left = x + "px"; tip.style.top = y + "px";
+}
+function hideTip() { $("tip").style.display = "none"; }
+
+let nav = null, raf = 0;
+function setView(a, b, fast) {
+  const full = LOG.xmax - LOG.xmin, minSpan = 0.5;
+  let span = Math.max(minSpan, Math.min(full, b - a));
+  if (a < LOG.xmin) a = LOG.xmin; if (a + span > LOG.xmax) a = LOG.xmax - span;
+  view.x0 = a; view.x1 = a + span;
+  cancelAnimationFrame(raf);
+  raf = requestAnimationFrame(() => { charts.forEach(c => { c.draw(); c.drawOverlay(); }); if (nav) nav.drawOverlay(); updateInfo(); if ($("stats").style.display === "block") buildStats(); });
+}
+
+// ============================================================
+//  Page
+// ============================================================
+let defs = [];
+function computeBands() {
+  failBands = [];
+  const E = LOG.E;
+  if (!E.x.length) return;
+  const f = E.c.fail || [], l = E.c.limit2 || []; let s = -1;
+  for (let i = 0; i < E.x.length; i++) {
+    const on = f[i] > 0 || l[i] > 0;
+    if (on && s < 0) s = i;
+    if ((!on || i === E.x.length - 1) && s >= 0) { failBands.push([E.x[s], E.x[i]]); s = -1; }
+  }
+}
+function build() {
+  defs = panelDefs(LOG);
+  computeBands();
+  // chips
+  const ch = $("chips"); ch.innerHTML = "";
+  const groups = [...new Set(defs.map(d => d.group))];
+  for (const gname of groups) {
+    const gd = defs.filter(d => d.group === gname);
+    if (!gd.some(d => d.available)) continue;
+    const g = document.createElement("div"); g.className = "chipgroup"; g.innerHTML = `<span class="glabel">${gname}</span>`;
+    for (const d of gd) {
+      const c = document.createElement("span");
+      c.className = "chip" + (d.available ? (shown.has(d.id) ? " on" : "") : " na");
+      c.textContent = d.title.replace(/ \((single|multi) PID\)/, "") + (d.unit && /minute|max|average|last/.test(d.title + d.unit) ? "" : "");
+      c.title = d.title + " — " + d.unit + (d.available ? "" : " (not in this log)");
+      if (d.id === "sToMin" || d.id === "mToMin") c.textContent = "Timeouts / min";
+      if (d.id === "sTo" || d.id === "mTo") c.textContent = "Timeouts / s";
+      if (d.available) c.onclick = () => { shown.has(d.id) ? shown.delete(d.id) : shown.add(d.id); c.classList.toggle("on"); saveShown(); renderCharts(); };
+      g.appendChild(c);
+    }
+    ch.appendChild(g);
+  }
+  // navigator: boost (or rpm) of the whole log
+  $("nav").innerHTML = "";
+  const navSrc = defs.find(d => d.id === "boost" && d.available) || defs.find(d => d.available);
+  nav = navSrc ? new Chart(Object.assign({}, navSrc, { title: "Whole log", unit: "drag / click to move the window · Ctrl+wheel to zoom", series: navSrc.series.slice(0, 1) }), $("nav"), true) : null;
+  if (nav) { nav.layout(); nav.draw(); }
+  renderCharts();
+  const st = $("settings"); st.textContent = LOG.settings.join("\n"); $("settingsBox").style.display = LOG.settings.length ? "block" : "none";
+}
+
+function renderCharts() {
+  const host = $("charts"); host.innerHTML = ""; charts.length = 0;
+  for (const d of defs) if (d.available && shown.has(d.id)) { const c = new Chart(d, host); charts.push(c); }
+  if (!charts.length) host.innerHTML = '<p class="hint">Pick a chart above.</p>';
+  charts.forEach(c => c.layout());
+  setView(view.x0, view.x1);
+}
+
+function updateInfo() {
+  if (!LOG) return;
+  const dur = LOG.xmax - LOG.xmin;
+  const parts = [`<b>${fileName}</b>`, `${fmtTime(dur, false, true)} long`, `${LOG.E.x.length} E · ${LOG.CS.x.length + LOG.CM.x.length} C · ${LOG.S.x.length} S`,
+    `time: ${LOG.source}`];
+  const modes = [...(LOG.modes || [])];
+  if (modes.length) parts.push("CAN: " + modes.join(" + "));
+  if (LOG.reboots.length) parts.push(`${LOG.reboots.length} restart${LOG.reboots.length > 1 ? "s" : ""}`);
+  if (LOG.unparsed) parts.push(`${LOG.unparsed} other lines skipped`);
+  if (LOG.live) parts.push(follow ? "following live" : "paused (press Follow live)");
+  parts.push(`showing ${fmtTime(view.x0, true)} – ${fmtTime(view.x1, true)}`);
+  $("info").innerHTML = parts.join(" · ");
+}
+
+// ---- stats of the visible range ----
+function buildStats() {
+  let h = "<table><tr><th>Chart</th><th>Value</th><th>Min</th><th>Avg</th><th>Max</th><th>Samples</th></tr>";
+  for (const d of defs) {
+    if (!d.available || d.lanes) continue;
+    const xs = d.ds.x, i0 = lowerBound(xs, view.x0), i1 = lowerBound(xs, view.x1 + 1e-9);
+    d.series.forEach((se, k) => {
+      const a = d.ds.c[se.key]; let mn = Infinity, mx = -Infinity, s = 0, n = 0;
+      for (let i = i0; i < i1; i++) { const v = a[i]; if (isNaN(v)) continue; if (v < mn) mn = v; if (v > mx) mx = v; s += v; n++; }
+      h += `<tr><td class="${k ? "g" : ""}">${k ? "" : d.title + " <span class='g'>(" + d.unit + ")</span>"}</td><td>${se.label}</td>` +
+           (n ? `<td>${mn.toFixed(se.dec)}</td><td>${(s / n).toFixed(se.dec + 1)}</td><td>${mx.toFixed(se.dec)}</td><td>${n}</td>` : `<td>–</td><td>–</td><td>–</td><td>0</td>`) + "</tr>";
+    });
+  }
+  // flags: time active
+  const fl = defs.find(d => d.id === "flags");
+  if (fl && fl.available) {
+    const xs = fl.ds.x, i0 = lowerBound(xs, view.x0), i1 = lowerBound(xs, view.x1 + 1e-9);
+    fl.series.forEach((se, k) => {
+      const a = fl.ds.c[se.key]; let on = 0, n = 0;
+      for (let i = i0; i < i1; i++) { if (isNaN(a[i])) continue; n++; if (a[i] > 0) on++; }
+      h += `<tr><td>${k ? "" : "Flags <span class='g'>(share of time on)</span>"}</td><td>${se.label}</td><td colspan="3">${n ? (100 * on / n).toFixed(1) + " %" : "–"}</td><td>${n}</td></tr>`;
+    });
+  }
+  $("stats").innerHTML = `<div class="hint">Values in the shown range ${fmtTime(view.x0, true)} – ${fmtTime(view.x1, true)} (zoom to change it)</div>` + h + "</table>";
+}
+
+function toast(msg) { const t = $("toast"); t.textContent = msg; t.style.display = "block"; clearTimeout(toast.t); toast.t = setTimeout(() => t.style.display = "none", 2200); }
+
+function copyCsv() {
+  const E = LOG.E; const keys = Object.keys(E.c);
+  let s = "time_s," + keys.join(",") + "\n";
+  const i0 = lowerBound(E.x, view.x0), i1 = lowerBound(E.x, view.x1 + 1e-9);
+  for (let i = i0; i < i1; i++) s += E.x[i].toFixed(3) + "," + keys.map(k => isNaN(E.c[k][i]) ? "" : E.c[k][i]).join(",") + "\n";
+  navigator.clipboard.writeText(s).then(() => toast(`${i1 - i0} rows copied (shown range). Paste into Excel.`), () => toast("The browser refused the clipboard."));
+}
+
+function load(file) {
+  fileName = file.name; $("info").textContent = "Reading " + file.name + " …";
+  const rd = new FileReader();
+  rd.onload = () => setTimeout(() => {
+    try {
+      LOG = parseLog(rd.result);
+      if (!LOG.E.x.length && !LOG.CS.x.length && !LOG.CM.x.length && !LOG.S.x.length) { $("info").textContent = "No E / C / S lines found in " + file.name + "."; return; }
+      $("drop").style.display = "none"; $("ui").style.display = "block";
+      ["bReset", "bStats", "bCsv"].forEach(b => $(b).disabled = false);
+      $("bCsv").disabled = !LOG.E.x.length;
+      view.x0 = LOG.xmin; view.x1 = LOG.xmax;
+      follow = false; updFollowBtn();
+      showTab("charts");
+      build();
+    } catch (err) { $("info").textContent = "Could not read the file: " + err.message; console.error(err); }
+  }, 10);
+  rd.readAsText(file);
+}
+
+$("file").addEventListener("change", e => { if (e.target.files[0]) load(e.target.files[0]); e.target.value = ""; });
+const dz = document.body;
+dz.addEventListener("dragover", e => { e.preventDefault(); $("drop").classList.add("over"); });
+dz.addEventListener("dragleave", e => { if (e.target === dz || e.target.id === "drop") $("drop").classList.remove("over"); });
+dz.addEventListener("drop", e => { e.preventDefault(); $("drop").classList.remove("over"); const f = e.dataTransfer.files[0]; if (f) load(f); });
+$("bReset").onclick = () => { stopFollow(); setView(LOG.xmin, LOG.xmax); };
+$("bStats").onclick = () => { const s = $("stats"); const on = s.style.display !== "block"; s.style.display = on ? "block" : "none"; $("bStats").classList.toggle("primary", on); if (on) buildStats(); };
+$("bCsv").onclick = copyCsv;
+document.addEventListener("keydown", e => {
+  if (!LOG || /INPUT|SELECT|TEXTAREA/.test(e.target.tagName) || curTab !== "charts") return;
+  const span = view.x1 - view.x0, c = (view.x0 + view.x1) / 2;
+  if (e.key === "ArrowLeft") setView(view.x0 - span * 0.2, view.x1 - span * 0.2);
+  else if (e.key === "ArrowRight") setView(view.x0 + span * 0.2, view.x1 + span * 0.2);
+  else if (e.key === "+" || e.key === "=") setView(c - span * 0.35, c + span * 0.35);
+  else if (e.key === "-" || e.key === "_") setView(c - span * 0.75, c + span * 0.75);
+  else if (e.key === "0" || e.key === "Escape") setView(LOG.xmin, LOG.xmax);
+  else return;
+  stopFollow();
+  e.preventDefault();
+});
+let rt = 0;
+addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(() => { if (!LOG) return; if (nav) { nav.layout(); nav.draw(); } charts.forEach(c => c.layout()); setView(view.x0, view.x1); }, 120); });
+try { matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => { if (LOG) { if (nav) nav.draw(); setView(view.x0, view.x1); } }); } catch (e) {}
+// ============================================================
+//  APP: Bluetooth link, live session, dashboard, settings, console
+// ============================================================
+const NUS = "6e400001-b5a3-f393-e0a9-e50e24dcca9e";
+const NUS_RX = "6e400002-b5a3-f393-e0a9-e50e24dcca9e";      // we write commands
+const NUS_TX = "6e400003-b5a3-f393-e0a9-e50e24dcca9e";      // the device notifies its lines
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const esc = t => String(t).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const pad2 = n => String(n).padStart(2, "0");
+
+const bt = { dev: null, tx: null, rx: null, state: "off", userClosed: true, q: Promise.resolve(), carry: "", dec: new TextDecoder(),
+             bytes: 0, lines: 0, rateB: 0, rateL: 0, mtu: null };
+const raw = [];                      // every line received in this session (Save log)
+const consLines = [];
+let consDirty = false;
+let curTab = "charts";
+let follow = false, liveDirty = false, liveLog = null, lastSigCheck = 0, lastDefsSig = "", lastNavDraw = 0;
+let lastE = null, lastEAt = 0, lastC = null;
+
+function banner(text, kind) {
+  const b = $("banner");
+  if (!text) { b.style.display = "none"; return; }
+  b.className = "banner " + (kind || ""); b.textContent = text; b.style.display = "block";
+}
+
+// ---------------- tabs ----------------
+function showTab(t) {
+  curTab = t;
+  document.querySelectorAll("#tabs button").forEach(b => b.classList.toggle("on", b.dataset.tab === t));
+  document.querySelectorAll(".tab").forEach(x => x.classList.toggle("on", x.id === "tab-" + t));
+  if (t === "charts" && LOG) relayout();
+  if (t === "console") { consDirty = true; renderConsole(); }
+  if (t === "live") renderLive();
+  hideTip();
+}
+function relayout() {
+  if (nav) { nav.layout(); nav.draw(); }
+  charts.forEach(c => c.layout());
+  if (follow) followView(); else setView(view.x0, view.x1);
+}
+document.querySelectorAll("#tabs button").forEach(b => b.onclick = () => showTab(b.dataset.tab));
+
+// ---------------- follow live ----------------
+function stopFollow() { if (follow) { follow = false; updFollowBtn(); } }
+function updFollowBtn() {
+  const b = $("bFollow");
+  b.disabled = !liveLog;
+  b.classList.toggle("on", follow && LOG === liveLog);
+  b.textContent = LOG && LOG !== liveLog && liveLog ? "Back to live" : "Follow live";
+}
+function followView() {
+  const w = +$("selWin").value, x1 = LOG.xmax;
+  setView(w ? Math.max(LOG.xmin, x1 - w) : LOG.xmin, x1);
+}
+$("bFollow").onclick = () => {
+  if (!liveLog) return;
+  if (LOG !== liveLog) { LOG = liveLog; fileName = "Live session"; lastDefsSig = ""; build(); }
+  follow = true; updFollowBtn(); followView();
+};
+$("selWin").onchange = () => { if (follow) followView(); };
+
+// ---------------- live session (datasets filled line by line) ----------------
+function makeLive() {
+  const D = newLogData();
+  return Object.assign(D, { live: true, source: "live from the device", useClk: false, clkBase: null, reboots: [], xmin: 0, xmax: 0.5,
+                            unparsed: 0, plotter: 0, settings: [], lines: 0, _t0: null, _off: 0, _last: -Infinity, _dev: 0, _cur: null });
+}
+function startLive() {
+  if (!liveLog) {
+    liveLog = makeLive();
+    raw.length = 0;
+    LOG = liveLog; fileName = "Live session";
+    view.x0 = 0; view.x1 = 0.5; follow = true; lastDefsSig = "";
+    $("drop").style.display = "none"; $("ui").style.display = "block";
+    ["bReset", "bStats", "bCsv", "bSaveLog", "bCopyLog"].forEach(b => $(b).disabled = false);
+    updFollowBtn();
+    showTab("live");
+  }
+}
+// device time (ms) -> seconds of the session. A restart of the device (its clock begins again) is joined on.
+function liveTime(dev) {
+  const g = liveLog;
+  if (dev === undefined || isNaN(dev)) dev = g._dev;
+  g._dev = dev;
+  if (g._t0 === null) g._t0 = dev;
+  let t = dev + g._off;
+  if (g._last > -Infinity && t < g._last - 1500) { g._off = g._last + 1000 - dev; t = dev + g._off; g.reboots.push((t - g._t0) / 1000); }
+  if (t > g._last) g._last = t;
+  return (t - g._t0) / 1000;
+}
+function liveLine(L) {
+  const g = liveLog; if (!g) return;
+  g.lines++;
+  if (L.startsWith("E ")) {
+    const d = parseE(L); if (!d) { g.unparsed++; return; }
+    const x = liveTime(d.t); pushE(g, x, d);
+    lastE = d; lastEAt = Date.now(); grow(x);
+    if (SET.loaded) updateLock();
+  } else if (L.startsWith("C ---- CAN")) g._cur = newC(L);
+  else if (L.startsWith("C ")) { if (g._cur) parseCLine(g._cur, L); }
+  else if (L.startsWith("S ")) {
+    const d = parseS(L), x = liveTime(g._cur ? g._cur.t : undefined);
+    if (g._cur) { pushC(g, x, g._cur); lastC = g._cur; lastC.s = d; }
+    pushS(g, x, d); g._cur = null; grow(x);
+  } else if (L.startsWith("I ")) {
+    if (L.startsWith("I ---- SETTINGS")) g.settings.length = 0;
+    g.settings.push(L.slice(2));
+  }
+}
+function grow(x) { if (x > liveLog.xmax) liveLog.xmax = x; liveDirty = true; }
+function defsSig() { return panelDefs(LOG).map(d => d.available ? d.id + ":" + d.series.map(x => x.key).join(",") : "").join("|"); }
+
+setInterval(() => {                                   // ~4 times a second: charts + dashboard
+  if (curTab === "live") renderLive();
+  if (curTab === "console") renderConsole();
+  if (!LOG || LOG !== liveLog || !liveDirty) return;
+  liveDirty = false;
+  const now = Date.now();
+  if (now - lastSigCheck > 2000) {                    // new kinds of data (CAN mode changed ...): rebuild the chart list
+    lastSigCheck = now;
+    const sig = defsSig();
+    if (sig !== lastDefsSig) { lastDefsSig = sig; build(); if (follow) followView(); return; }
+  }
+  if (curTab !== "charts") return;
+  computeBands();
+  if (follow) followView(); else setView(view.x0, view.x1);
+  if (nav && now - lastNavDraw > 1000) { lastNavDraw = now; nav.draw(); nav.drawOverlay(); }
+}, 250);
+
+setInterval(() => {                                   // link rates
+  bt.rateB = bt.bytes; bt.rateL = bt.lines; bt.bytes = 0; bt.lines = 0;
+  if (bt.state === "ready") $("btText").textContent = `Connected · ${(bt.rateB / 1000).toFixed(1)} kB/s`;
+}, 1000);
+
+// ---------------- Bluetooth ----------------
+function setBt(state, text) {
+  bt.state = state;
+  $("btPill").dataset.s = state;
+  $("btText").textContent = text || { off: "Not connected", connecting: "Connecting…", pairing: "Opening link… (type the passkey if the phone asks)",
+                                      ready: "Connected", reconnecting: "Reconnecting…", failed: "Connection failed" }[state];
+  $("bConn").textContent = (state === "off" || state === "failed") ? "Connect" : "Disconnect";
+  updateSettingsState();
+}
+
+function btUnsupportedReason() {
+  if (!window.isSecureContext) return "Bluetooth needs a secure page: open this page from its https:// address.";
+  if (!navigator.bluetooth) {
+    if (/iPhone|iPad|iPod/.test(navigator.userAgent)) return "Safari on iPhone / iPad has no Web Bluetooth. Open this page in the free “Bluefy – Web BLE Browser” app.";
+    return "This browser has no Web Bluetooth. Use Chrome or Edge (Android, Windows, Mac), or Bluefy on iPhone.";
+  }
+  return "";
+}
+
+async function btConnectClick() {
+  if (bt.state !== "off" && bt.state !== "failed") { btDisconnect(); return; }
+  const why = btUnsupportedReason();
+  if (why) { banner(why, "warn"); return; }
+  try {
+    bt.dev = await navigator.bluetooth.requestDevice({ filters: [{ services: [NUS] }, { namePrefix: "Palta" }], optionalServices: [NUS] });
+  } catch (e) {
+    if (e.name === "NotFoundError" && !/globally disabled|not available|adapter/i.test(e.message)) return;   // chooser closed
+    if (e.name === "SecurityError" || /permissions policy|disallowed|feature policy/i.test(e.message))
+      banner("Bluetooth is blocked in this embedded view. Open the page on its own (its https:// address), or in Bluefy on iPhone.", "warn");
+    else banner("Bluetooth: " + e.message, "warn");
+    return;
+  }
+  bt.dev.removeEventListener("gattserverdisconnected", btOnDisconnect);
+  bt.dev.addEventListener("gattserverdisconnected", btOnDisconnect);
+  bt.userClosed = false;
+  banner("");
+  await btOpen(false);
+}
+
+async function btOpen(again) {
+  setBt(again ? "reconnecting" : "connecting");
+  let lastErr = null;
+  for (let attempt = 1; attempt <= 8 && !bt.userClosed; attempt++) {
+    try {
+      const gatt = bt.dev.gatt.connected ? bt.dev.gatt : await bt.dev.gatt.connect();
+      setBt("pairing");
+      const svc = await gatt.getPrimaryService(NUS);
+      const tx = await svc.getCharacteristic(NUS_TX);
+      const rx = await svc.getCharacteristic(NUS_RX);
+      if (bt.tx) bt.tx.removeEventListener("characteristicvaluechanged", btOnData);
+      bt.tx = tx; bt.rx = rx;
+      tx.addEventListener("characteristicvaluechanged", btOnData);
+      await tx.startNotifications();                   // needs the paired link: the first time the phone asks for the passkey here
+      bt.carry = ""; bt.q = Promise.resolve();
+      setBt("ready");
+      startLive();
+      sendReportChoice();
+      btSend("G");
+      return true;
+    } catch (e) {
+      lastErr = e;
+      if (bt.userClosed) break;
+      await sleep(1000 + attempt * 600);              // pairing dialog open / link still settling: try again
+    }
+  }
+  if (!bt.userClosed) {
+    setBt("failed", "Connection failed");
+    banner("Could not open the link. Check: the device is on and near; the passkey (BLE_PASSKEY in BleLink.h) was typed right. " +
+           "If the device was flashed again or its pairings were erased (Serial command u), remove “PaltaBoost” in the phone's Bluetooth settings, then connect again." +
+           (lastErr ? "  [" + lastErr.message + "]" : ""), "warn");
+  }
+  return false;
+}
+
+function btOnDisconnect() {
+  if (bt.userClosed) { setBt("off"); return; }
+  setBt("reconnecting");
+  setTimeout(() => { if (!bt.userClosed) btOpen(true); }, 1000);
+}
+
+function btDisconnect() {
+  bt.userClosed = true;
+  try { if (bt.dev && bt.dev.gatt.connected) bt.dev.gatt.disconnect(); } catch (e) {}
+  setBt("off");
+}
+
+function btSend(line) {
+  if (bt.state !== "ready" || !bt.rx) { toast("Not connected"); return Promise.resolve(false); }
+  consPush("> " + line, "out");
+  const data = new TextEncoder().encode(line + "\n");
+  bt.q = bt.q.then(async () => {                       // one GATT write at a time (Web Bluetooth refuses parallel ones)
+    for (let i = 0; i < data.length; i += 20) {
+      const part = data.slice(i, i + 20);
+      if (bt.rx.writeValueWithResponse) await bt.rx.writeValueWithResponse(part); else await bt.rx.writeValue(part);
+    }
+    return true;
+  }).catch(e => { consPush("! send failed: " + e.message, "err"); return false; });
+  return bt.q;
+}
+
+function btOnData(ev) {
+  const v = ev.target.value;
+  bt.bytes += v.byteLength;
+  const text = bt.carry + bt.dec.decode(new Uint8Array(v.buffer, v.byteOffset, v.byteLength), { stream: true });
+  const parts = text.split(/\r?\n/);
+  bt.carry = parts.pop();
+  if (bt.carry.length > 4000) bt.carry = "";
+  for (const L of parts) if (L.length) handleLine(L);
+}
+
+function handleLine(L) {
+  bt.lines++;
+  raw.push(L);
+  consPush(L);
+  const c = L[0];
+  if (c === "E" || c === "C" || c === "S" || c === "I") liveLine(L);
+  else if (c === "K" || c === "H" || c === "X" || c === "O" || c === "V") setLine(L);
+}
+
+$("bConn").onclick = btConnectClick;
+
+// ---------------- save / copy the received log ----------------
+// inside the Claude viewer a page can only save through its "downloads" capability; on your own https page a normal download is used
+let claudeDl = null;
+try { if (window.claude && window.claude.use) window.claude.use("downloads").then(d => { claudeDl = d; }, () => {}); } catch (e) {}
+$("bSaveLog").onclick = async () => {
+  const d = new Date(), text = raw.join("\n") + "\n";
+  const name = `palta_${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}_${pad2(d.getHours())}-${pad2(d.getMinutes())}.txt`;
+  if (claudeDl) {
+    try { await claudeDl.save({ filename: name, data: text }); toast(`${raw.length} lines saved`); }
+    catch (e) { toast(e && e.code === "declined" ? "Not saved" : "Saving is not possible here: use Copy log"); }
+    return;
+  }
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([text], { type: "text/plain" }));
+  a.download = name;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+  toast(`${raw.length} lines saved`);
+};
+$("bCopyLog").onclick = () => navigator.clipboard.writeText(raw.join("\n") + "\n")
+  .then(() => toast(`${raw.length} lines copied`), () => toast("The browser refused the clipboard."));
+
+// ============================================================
+//  Dashboard
+// ============================================================
+const WL_UNITS = ["rpm", "km/h", "°C", "bar", "", "°C", "bar", "°C", "°C"];
+const TILES = [
+  { k: "boost", label: "Boost", unit: "bar", dec: 2, wl: 3, big: true },
+  { k: "rpm", label: "RPM", dec: 0, wl: 0 },
+  { k: "gear", label: "Gear", dec: 0 },
+  { k: "speed", label: "Speed", unit: "km/h", dec: 0, wl: 1 },
+  { k: "macDuty", label: "MAC duty", unit: "%", dec: 1 },
+  { k: "mapDuty", label: "Map duty", unit: "%", dec: 1 },
+  { k: "pidTrim", label: "PID trim", unit: "%", dec: 1 },
+  { k: "hz", label: "Valve", unit: "Hz", dec: 1 },
+  { k: "oilT", label: "Oil temp", unit: "°C", dec: 0, wl: 7 },
+  { k: "oilP", label: "Oil press", unit: "bar", dec: 2, wl: 6 },
+  { k: "clt", label: "Coolant", unit: "°C", dec: 0, wl: 2 },
+  { k: "iat", label: "Intake air", unit: "°C", dec: 0, wl: 8 },
+  { k: "afr", label: "AFR", dec: 2, wl: 4 },
+  { k: "egt", label: "EGT", unit: "°C", dec: 0, wl: 5 },
+];
+(function buildTiles() {
+  $("tiles").innerHTML = TILES.map(t => `<div class="tile${t.big ? " big" : ""}" id="tile-${t.k}"><div class="tl"><span>${t.label}</span><span class="st"></span></div>` +
+    `<div class="tv"><span>–</span>${t.unit ? `<small>${t.unit}</small>` : ""}</div></div>`).join("");
+})();
+
+function renderLive() {
+  const d = lastE;
+  if (!d) return;
+  const stale = Date.now() - lastEAt > 2500;
+  $("liveBox").classList.toggle("stale", stale);
+  const fl = (on, txt, kind) => `<span class="flag ${on ? "on " + kind : ""}">${txt}</span>`;
+  const mapName = d.map !== undefined ? (SET.maps[d.map] || MAPS[d.map]) : "–";
+  $("liveTop").innerHTML = `<span class="mapchip">${esc(mapName)}</span>` +
+    fl(d.pidOn, "PID", "info") + fl(d.warn, "WARN", "warn") + fl(d.fail, "FAIL", "crit") +
+    fl(d.alert, d.alert ? "ALERT " + d.alert : "ALERT", d.alert >= 2 ? "crit" : "warn") + fl(d.limit2, "LIMIT 2 → valve 0", "crit") + fl(d.rec, "REC", "info") +
+    (d.peak > 0 ? `<span class="flag on warn">peak ${d.peak.toFixed(2)} bar</span>` : "") +
+    (stale ? `<span class="flag on warn">no data for ${Math.round((Date.now() - lastEAt) / 1000)} s</span>` : "");
+  for (const t of TILES) {
+    const el = $("tile-" + t.k); if (!el) continue;
+    const v = d[t.k];
+    el.querySelector(".tv span").textContent = (v === undefined || isNaN(v)) ? "–" : v.toFixed(t.dec);
+    let cls = "", st = "";
+    if (t.wl !== undefined && d.wl) { const ch = d.wl[t.wl]; if (ch === "L") { cls = "crit"; st = "LIMIT"; } else if (ch === "w") { cls = "warn"; st = "warning"; } }
+    if (t.k === "boost") { if (d.fail) { cls = "crit"; st = "FAIL"; } else if (d.warn && !cls) { cls = "warn"; st = "WARN"; } }
+    el.className = "tile" + (t.big ? " big" : "") + (cls ? " " + cls : "");
+    el.querySelector(".st").textContent = st;
+  }
+  const c = lastC, s = c && c.s;
+  const parts = [];
+  if (bt.state === "ready") parts.push(`Bluetooth ${(bt.rateB / 1000).toFixed(1)} kB/s, ${bt.rateL} lines/s` + (bt.mtu ? `, packet ${bt.mtu - 3} B` : ""));
+  if (c) parts.push(`CAN ${c.baud || ""}k ${c.mode}` + (c.multi ? `, ${c.multi["var/s"]} values/s` : c.head.varTot !== undefined ? `, ${c.head.varTot} values/s` : ""));
+  if (d.loopAvg !== undefined) parts.push(`loop ${d.loopAvg.toFixed(2)} ms (max ${d.loopMax.toFixed(1)})`);
+  if (s && s.heap) parts.push(`heap ${s.heap.toFixed(0)} KB`);
+  $("linkinfo").textContent = parts.join(" · ");
+}
+
+// ============================================================
+//  Settings
+// ============================================================
+const SET = { val: {}, lo: {}, hi: {}, dec: {}, pend: {}, err: {}, loaded: false, unsaved: false, locked: false, lockspeed: 3,
+              rpm: [500, 250, 15], gears: 5, maps: ["OFF", "STREET", "SPORT", "RACE"],
+              wl: ["Engine RPM", "Vehicle Speed", "Coolant Temp", "Manifold Press", "Air Fuel Ratio", "EGT", "Oil Press", "Oil Temp", "Intake Temp"],
+              rendered: false, mapTab: 2 };
+
+function setLine(L) {
+  const p = L.trim().split(/\s+/);
+  if (p[0] === "V") {
+    const m = /mtu:(\d+)/.exec(L); bt.mtu = m ? +m[1] : null;
+    const ls = /lockspeed:(\d+)/.exec(L); if (ls) SET.lockspeed = +ls[1];
+    return;
+  }
+  if (p[0] === "H") {
+    if (p[1] === "rpm") SET.rpm = [+p[2], +p[3], +p[4]];
+    else if (p[1] === "gears") SET.gears = +p[2];
+    else if (p[1] === "maps") SET.maps = p.slice(2);
+    else if (p[1] === "wl") SET.wl[+p[2]] = p.slice(3).join(" ");
+    else if (p[1] === "lockspeed") SET.lockspeed = +p[2];
+    return;
+  }
+  if (p[0] === "X") {
+    const key = p[1], why = p.slice(2).join(" ");
+    SET.err[key] = why;
+    toast(`${key}: ${why}`);
+    if (!(key in SET.val)) delete SET.pend[key];
+    return;
+  }
+  if (p[0] === "O") { toast(L.slice(2)); if (/saved/.test(L)) { SET.unsaved = false; updateSettingsState(); } return; }
+  if (p[0] !== "K") return;
+  if (p[1] === "end") {
+    const u = /unsaved:(\d)/.exec(L); if (u) SET.unsaved = u[1] === "1";
+    SET.loaded = true;
+    if (!SET.rendered) renderSettings();
+    updateSettingsState();
+    return;
+  }
+  const key = p[1];
+  SET.val[key] = +p[2]; SET.lo[key] = +p[3]; SET.hi[key] = +p[4]; SET.dec[key] = +p[5];
+  const asked = !!SET.pend[key], err = SET.err[key];
+  delete SET.pend[key]; delete SET.err[key];
+  if (asked && !err) SET.unsaved = true;
+  if (SET.rendered) { updateField(key, asked ? (err ? "err" : "ok") : ""); updateSettingsState(); }
+}
+
+function fmtSet(key) { const v = SET.val[key]; return v === undefined ? "" : v.toFixed(SET.dec[key] || 0); }
+
+// ---- field builders (data-key = the setting) ----
+function fNum(key, label, unit, help) {
+  return `<label class="row"><span class="lbl">${label}${help ? `<small>${help}</small>` : ""}</span>` +
+         `<span class="ctl"><input type="number" inputmode="decimal" data-key="${key}"><span class="unit">${unit || ""}</span></span></label>`;
+}
+function fSeg(key, label, opts) {
+  return `<div class="row"><span class="lbl">${label}</span><span class="seg" data-key="${key}">` +
+         opts.map(([v, t]) => `<button type="button" data-v="${v}">${t}</button>`).join("") + `</span></div>`;
+}
+function curveSvg(id) { return `<svg class="curve" id="${id}" viewBox="0 0 300 90" preserveAspectRatio="none" role="img" aria-label="correction curve"></svg>`; }
+
+function renderSettings() {
+  const [rmin, rstep, rn] = SET.rpm;
+  const maps = SET.maps.slice(1).map((n, i) => [i + 1, n]);
+  let h = `<div class="cards">`;
+  h += `<div class="card"><h3>Boost control</h3>` +
+       fSeg("b.map", "Active map", SET.maps.map((n, i) => [i, n])) +
+       fNum("b.freq", "Valve frequency", "Hz", "10 … 100 Hz, default 35") +
+       fNum("b.maxc", "Max PID correction", "%", "duty % the PID may take away") + `</div>`;
+  h += `<div class="card" id="mapCard"><h3>Map settings</h3><div class="row maptabs"><span class="lbl">Map</span><span class="seg" id="mapTabs">` +
+       maps.map(([v, n]) => `<button type="button" data-m="${v}">${n}</button>`).join("") + `</span></div><div id="mapRows"></div>` +
+       `<p class="hint">start ≤ target ≤ warn ≤ fail: when one value passes another, the device moves the other one along (like on the screen).</p></div>`;
+  h += `<div class="card"><h3>RPM correction</h3>${curveSvg("rpmCurve")}<div class="grid2">`;
+  for (let i = 0; i < rn; i++) h += `<div class="row"><span class="lbl">${rmin + i * rstep} rpm</span><span class="ctl">` +
+       `<span class="seg" data-key="re.${i}"><button type="button" data-v="1">on</button><button type="button" data-v="0">off</button></span>` +
+       `<input type="number" inputmode="numeric" data-key="r.${i}" style="width:62px"><span class="unit">%</span></span></div>`;
+  h += `</div><p class="hint">A step that is off is skipped: the curve goes straight over it. 100 % = no change.</p></div>`;
+  h += `<div class="card"><h3>Gear correction</h3>${curveSvg("gearCurve")}`;
+  for (let i = 0; i < SET.gears; i++) h += `<div class="row"><span class="lbl">Gear ${i + 1}</span><span class="ctl">` +
+       `<span class="seg" data-key="ge.${i}"><button type="button" data-v="1">on</button><button type="button" data-v="0">off</button></span>` +
+       `<input type="number" inputmode="numeric" data-key="g.${i}" style="width:62px"><span class="unit">%</span></span></div>`;
+  h += `<p class="hint">A gear that is off gets 100 %.</p></div>`;
+  h += `<div class="card"><h3>Warnings &amp; Limits</h3>`;
+  for (let p = 0; p < SET.wl.length; p++) {
+    h += `<div class="wl"><div class="wlh"><span>${esc(SET.wl[p])}</span>` +
+         `<span class="seg" data-key="w${p}.on"><button type="button" data-v="1">Active</button><button type="button" data-v="0">Off</button></span></div>` +
+         fSeg(`w${p}.dir`, "Passed when the value is", [[0, "Greater"], [1, "Lower"]]) +
+         fNum(`w${p}.l1`, "Warning (LED flashes)", WL_UNITS[p]) +
+         fNum(`w${p}.l2`, "Limit (LED on, valve 0 %)", WL_UNITS[p]) +
+         fSeg(`w${p}.led`, "LED", [[0, "Blue"], [1, "Red"]]) +
+         `<div class="note" id="wlnote${p}"></div></div>`;
+  }
+  h += `<p class="hint">Extra conditions (“Add Condition”) are kept, but only editable on the device.</p></div>`;
+  h += `<div class="card"><h3>CAN bus &amp; sensors</h3>` +
+       `<label class="row"><span class="lbl">Baud rate<small>set by the car maker; the controller restarts</small></span><span class="ctl"><select data-key="c.baud">` +
+       [125, 250, 500, 1000].map(b => `<option value="${b}">${b === 1000 ? "1 Mbps" : b + " kbps"}</option>`).join("") + `</select></span></label>` +
+       fSeg("c.multi", "Request", [[1, "Multi PID"], [0, "Single PID"]]) +
+       fSeg("c.silence", "CAN bus", [[0, "Normal"], [1, "Silent"]]) +
+       fSeg("c.extmap", "Boost from", [[0, "Car (OBD)"], [1, "External"]]) +
+       fSeg("c.extspd", "Speed from", [[0, "Car (OBD)"], [1, "Wheel sensor"]]) +
+       `<p class="hint">Silent = nothing is sent on the CAN bus (for a scan tool). No live engine data while silent.</p></div>`;
+  h += `</div>`;
+  $("setBody").innerHTML = h;
+  SET.rendered = true;
+  renderMapRows();
+  for (const k in SET.val) updateField(k, "");
+}
+
+function renderMapRows() {
+  const m = SET.mapTab;
+  document.querySelectorAll("#mapTabs button").forEach(b => b.classList.toggle("on", +b.dataset.m === m));
+  $("mapRows").innerHTML =
+    fNum(`m${m}.start`, "Start boost", "bar", "below this the duty is 0") + fNum(`m${m}.sduty`, "Duty at start", "%") +
+    fNum(`m${m}.target`, "Target boost", "bar") + fNum(`m${m}.tduty`, "Duty at target", "%") +
+    fNum(`m${m}.warn`, "Warn limit", "bar", "WARN + alert") + fNum(`m${m}.fail`, "Fail limit", "bar", "valve 0 % until boost ≤ 0");
+  for (const f of ["start", "sduty", "target", "tduty", "warn", "fail"]) updateField(`m${m}.${f}`, "");
+}
+
+function updateField(key, flash) {
+  const el = document.querySelector(`[data-key="${CSS.escape(key)}"]`);
+  if (el) {
+    if (el.classList.contains("seg")) {
+      el.querySelectorAll("button").forEach(b => b.classList.toggle("on", +b.dataset.v === SET.val[key]));
+    } else if (el.tagName === "SELECT") {
+      el.value = String(SET.val[key]);
+    } else if (document.activeElement !== el || flash) {
+      el.value = fmtSet(key);
+      const dec = SET.dec[key] || 0;
+      el.step = dec ? String(Math.pow(10, -dec)) : "1";
+      el.min = SET.lo[key]; el.max = SET.hi[key];
+      el.title = `${SET.lo[key]} … ${SET.hi[key]}`;
+    }
+    el.classList.remove("pend", "ok", "err");
+    if (flash) { el.classList.add(flash); setTimeout(() => el.classList.remove(flash), flash === "err" ? 2500 : 900); }
+  }
+  if (/^r\.|^re\./.test(key)) drawCurve("rpmCurve", "r.", "re.", SET.rpm[2]);
+  if (/^g\.|^ge\./.test(key)) drawCurve("gearCurve", "g.", "ge.", SET.gears);
+  const w = /^w(\d+)\./.exec(key); if (w) wlNote(+w[1]);
+}
+
+function wlNote(p) {
+  const n = $("wlnote" + p); if (!n) return;
+  const on = SET.val[`w${p}.on`], dir = SET.val[`w${p}.dir`], l1 = SET.val[`w${p}.l1`], l2 = SET.val[`w${p}.l2`];
+  const bad = (dir === 0 && l1 > l2) || (dir === 1 && l1 < l2);
+  n.textContent = !on ? "Off: this parameter does not warn." :
+    bad ? `The warning is ${dir === 0 ? "above" : "below"} the limit: the two are swapped when you save (like on the device).` : "";
+}
+
+function drawCurve(id, kv, ke, n) {
+  const svg = $(id); if (!svg) return;
+  const pts = [];
+  for (let i = 0; i < n; i++) pts.push({ i, v: SET.val[kv + i], on: SET.val[ke + i] === 1 });
+  const X = i => 8 + i * (284 / Math.max(1, n - 1)), Y = v => 84 - (Math.max(0, Math.min(200, v)) / 200) * 78;
+  const line = pts.filter(p => p.on && p.v !== undefined).map(p => `${X(p.i).toFixed(1)},${Y(p.v).toFixed(1)}`).join(" ");
+  let h = `<line x1="0" x2="300" y1="${Y(100)}" y2="${Y(100)}" stroke="var(--grid)" stroke-width="1" stroke-dasharray="4 3" vector-effect="non-scaling-stroke"/>`;
+  if (line) h += `<polyline points="${line}" fill="none" stroke="var(--s1)" stroke-width="2" vector-effect="non-scaling-stroke" stroke-linejoin="round"/>`;
+  for (const p of pts) if (p.v !== undefined) h += `<circle cx="${X(p.i)}" cy="${Y(p.v)}" r="3" fill="${p.on ? "var(--s1)" : "var(--surface-1)"}" stroke="${p.on ? "var(--surface-1)" : "var(--text-muted)"}" stroke-width="1.5"/>`;
+  svg.innerHTML = h;
+}
+
+function sendSet(key, value) {
+  if (bt.state !== "ready") { toast("Not connected"); updateField(key, ""); return; }
+  if (SET.locked) { toast("Vehicle moving: settings are read-only"); updateField(key, ""); return; }
+  const v = String(value).trim().replace(",", ".");
+  if (v === "" || isNaN(+v)) { toast("Not a number"); updateField(key, "err"); return; }
+  SET.pend[key] = true;
+  const el = document.querySelector(`[data-key="${CSS.escape(key)}"]`);
+  if (el) el.classList.add("pend");
+  btSend(`S ${key} ${+v}`);
+}
+
+$("setBody").addEventListener("change", e => {
+  const el = e.target.closest("[data-key]");
+  if (el && (el.tagName === "INPUT" || el.tagName === "SELECT")) sendSet(el.dataset.key, el.value);
+});
+$("setBody").addEventListener("keydown", e => { if (e.key === "Enter" && e.target.tagName === "INPUT") e.target.blur(); });
+$("setBody").addEventListener("click", e => {
+  const mt = e.target.closest("#mapTabs button");
+  if (mt) { SET.mapTab = +mt.dataset.m; renderMapRows(); return; }
+  const b = e.target.closest(".seg[data-key] button");
+  if (b) { const seg = b.parentElement; if (+b.dataset.v !== SET.val[seg.dataset.key]) sendSet(seg.dataset.key, b.dataset.v); }
+});
+
+function updateLock() {
+  const moving = !!(lastE && Date.now() - lastEAt < 3000 && lastE.speed > SET.lockspeed);
+  if (moving !== SET.locked) { SET.locked = moving; updateSettingsState(); }
+}
+
+function updateSettingsState() {
+  const ready = bt.state === "ready";
+  $("bReload").disabled = !ready;
+  $("bSave").disabled = !ready || !SET.unsaved;            // (saving is allowed while moving: it changes nothing)
+  const st = !ready ? (SET.loaded ? "Not connected: the values below may be old." : "Connect to read the settings from the device.")
+           : !SET.loaded ? "Reading the settings…"
+           : SET.unsaved ? "Changed on the device, NOT saved yet: they are lost at power off. Press Save to device."
+           : "All settings saved on the device.";
+  $("setState").textContent = st;
+  $("lockBanner").style.display = SET.locked ? "block" : "none";
+  $("lockBanner").textContent = `Vehicle moving (over ${SET.lockspeed} km/h): settings are read-only. Stop to change them.`;
+  $("setBody").classList.toggle("locked", SET.locked || !ready);
+}
+
+$("bReload").onclick = () => { SET.loaded = false; updateSettingsState(); btSend("G"); };
+$("bSave").onclick = () => btSend("W");
+
+// ============================================================
+//  Console
+// ============================================================
+function consPush(L, cls) {
+  consLines.push([L, cls || ""]);
+  if (consLines.length > 700) consLines.splice(0, consLines.length - 500);
+  consDirty = true;
+}
+function renderConsole() {
+  if (!consDirty) return;
+  consDirty = false;
+  const pre = $("cons"), atEnd = pre.scrollTop + pre.clientHeight >= pre.scrollHeight - 30;
+  pre.innerHTML = consLines.slice(-400).map(([l, c]) => c ? `<span class="${c}">${esc(l)}</span>` : esc(l)).join("\n");
+  if (atEnd) pre.scrollTop = pre.scrollHeight;
+}
+function sendReportChoice() { return btSend(`D ${$("cPeriod").value} ${$("cE").checked ? 1 : 0} ${$("cC").checked ? 1 : 0}`); }
+["cPeriod", "cE", "cC"].forEach(id => $(id).onchange = () => { if (bt.state === "ready") sendReportChoice(); });
+$("bInfo").onclick = () => btSend("i");
+$("bRst").onclick = () => btSend("r");
+$("bClr").onclick = () => { consLines.length = 0; consDirty = true; renderConsole(); };
+$("cForm").onsubmit = e => { e.preventDefault(); const v = $("cIn").value.trim(); if (v) { btSend(v); $("cIn").value = ""; } };
+
+// for tests: feed lines as if they came from the device
+window.__pbvFeed = (text) => { startLive(); for (const L of text.split(/\r?\n/)) if (L) handleLine(L); };
+
+window.__pbvLoadText = (name, text) => load(new File([text], name, { type: "text/plain" }));   // for testing
+})();
+</script>
+</body>
+</html>
