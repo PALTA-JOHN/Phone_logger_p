@@ -1365,7 +1365,7 @@ function renderLive() {
 // ============================================================
 //  Settings
 // ============================================================
-const SET = { val: {}, lo: {}, hi: {}, dec: {}, pend: {}, err: {}, loaded: false, unsaved: false, locked: false, lockspeed: 254,
+const SET = { val: {}, lo: {}, hi: {}, dec: {}, pend: {}, err: {}, loaded: false, unsaved: false, locked: false, : 254,
               rpm: [500, 250, 15], gears: 5, maps: ["OFF", "STREET", "SPORT", "RACE"],
               wl: ["Engine RPM", "Vehicle Speed", "Coolant Temp", "Manifold Press", "Air Fuel Ratio", "EGT", "Oil Press", "Oil Temp", "Intake Temp"],
               rendered: false, mapTab: 2 };
@@ -1382,7 +1382,7 @@ function setLine(L) {
     else if (p[1] === "gears") SET.gears = +p[2];
     else if (p[1] === "maps") SET.maps = p.slice(2);
     else if (p[1] === "wl") SET.wl[+p[2]] = p.slice(3).join(" ");
-    else if (p[1] === "lockspeed") SET.lockspeed = +p[2];
+    //else if (p[1] === "lockspeed") SET.lockspeed = +p[2];
     return;
   }
   if (p[0] === "X") {
