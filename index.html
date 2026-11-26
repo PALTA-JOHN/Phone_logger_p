@@ -157,7 +157,7 @@ select, input[type=number], input[type=text] { font: inherit; color: var(--text-
 .maptabs { margin-bottom: 4px; }
 /* console */
 #cons { background: var(--surface-1); border: 1px solid var(--border); border-radius: 10px; padding: 8px 10px; height: 55vh; overflow: auto; white-space: pre; font: 11.5px/1.4 ui-monospace, Consolas, monospace; margin: 0 0 8px; }
-#cons .out { color: var(--accent); } #cons .err { color: var(--critical); }
+#cons .out { color: var(--accent); } #cons .tm { color: var(--text-muted); } #cons .err { color: var(--critical); }
 #cForm { display: flex; gap: 8px; } #cForm input { flex: 1; }
 @media (max-width: 700px) {
   header { padding: 8px 10px; gap: 8px 10px; }
@@ -208,7 +208,7 @@ select, input[type=number], input[type=text] { font: inherit; color: var(--text-
       Files never leave your phone or computer: they are read by this page only.
       <ul>
         <li>Reads the <b>E</b> lines (engine, boost, duty, warnings), the <b>C</b> blocks (CAN statistics) and the <b>S</b> lines (loop, heap).</li>
-        <li>Time axis: the <code>t:</code> field of the firmware, or the Serial (<code>12:16:01.123 -&gt;</code>), or estimated from the S lines.</li>
+        <li>Time axis: the <code>t:</code> field of the firmware, or the Arduino IDE timestamps (<code>12:16:01.123 -&gt;</code>), or estimated from the S lines.</li>
         <li>A live session can be saved with <b>Save log</b> and opened here again later.</li>
       </ul>
     </div>
@@ -241,6 +241,7 @@ select, input[type=number], input[type=text] { font: inherit; color: var(--text-
       <label class="hint" style="margin:0"><input type="checkbox" id="cC" checked> CAN + system</label>
       <button class="btn" id="bInfo">Settings snapshot (i)</button>
       <button class="btn" id="bRst">Reset CAN totals (r)</button>
+      <label class="hint" style="margin:0" title="the time each line arrived on the phone (ms)"><input type="checkbox" id="cTime"> Arrival time</label>
       <button class="btn" id="bClr">Clear</button>
     </div>
     <pre id="cons"></pre>
@@ -284,6 +285,7 @@ function parseE(L) {
     else if (/^ALERT\d/.test(tk)) d.alert = +tk.slice(5);
     else if (/^REC\d*$/.test(tk)) d.rec = 1;
     else if (tk.startsWith("LIMIT2")) d.limit2 = 1;
+    else if (tk === "SIM") d.sim = 1;
     else if (MAPS.includes(tk)) d.map = MAPS.indexOf(tk);
   }
   if (d.rpm === undefined) return null;
@@ -1141,9 +1143,15 @@ function liveLine(L) {
 function grow(x) { if (x > liveLog.xmax) liveLog.xmax = x; liveDirty = true; }
 function defsSig() { return panelDefs(LOG).map(d => d.available ? d.id + ":" + d.series.map(x => x.key).join(",") : "").join("|"); }
 
-setInterval(() => {                                   // ~4 times a second: charts + dashboard
-  if (curTab === "live") renderLive();
-  if (curTab === "console") renderConsole();
+// dashboard + console: drawn on the next screen frame after a line arrives (every line shows at once)
+let uiFrame = 0;
+function scheduleUi() {
+  if (uiFrame) return;
+  uiFrame = requestAnimationFrame(() => { uiFrame = 0; if (curTab === "live") renderLive(); if (curTab === "console") renderConsole(); });
+}
+setInterval(() => { if (curTab === "live") renderLive(); }, 1000);   // (the "no data for N s" warning also when nothing comes)
+
+setInterval(() => {                                   // charts: 10 times a second
   if (!LOG || LOG !== liveLog || !liveDirty) return;
   liveDirty = false;
   const now = Date.now();
@@ -1156,7 +1164,7 @@ setInterval(() => {                                   // ~4 times a second: char
   computeBands();
   if (follow) followView(); else setView(view.x0, view.x1);
   if (nav && now - lastNavDraw > 1000) { lastNavDraw = now; nav.draw(); nav.drawOverlay(); }
-}, 250);
+}, 100);
 
 setInterval(() => {                                   // link rates
   bt.rateB = bt.bytes; bt.rateL = bt.lines; bt.bytes = 0; bt.lines = 0;
@@ -1277,6 +1285,7 @@ function handleLine(L) {
   bt.lines++;
   raw.push(L);
   consPush(L);
+  scheduleUi();
   const c = L[0];
   if (c === "E" || c === "C" || c === "S" || c === "I") liveLine(L);
   else if (c === "K" || c === "H" || c === "X" || c === "O" || c === "V") setLine(L);
@@ -1340,7 +1349,7 @@ function renderLive() {
   const mapName = d.map !== undefined ? (SET.maps[d.map] || MAPS[d.map]) : "–";
   $("liveTop").innerHTML = `<span class="mapchip">${esc(mapName)}</span>` +
     fl(d.pidOn, "PID", "info") + fl(d.warn, "WARN", "warn") + fl(d.fail, "FAIL", "crit") +
-    fl(d.alert, d.alert ? "ALERT " + d.alert : "ALERT", d.alert >= 2 ? "crit" : "warn") + fl(d.limit2, "LIMIT 2 → valve 0", "crit") + fl(d.rec, "REC", "info") +
+    fl(d.alert, d.alert ? "ALERT " + d.alert : "ALERT", d.alert >= 2 ? "crit" : "warn") + fl(d.limit2, "LIMIT 2 → valve 0", "crit") + fl(d.rec, "REC", "info") + (d.sim ? fl(1, "SIMULATOR", "warn") : "") +
     (d.peak > 0 ? `<span class="flag on warn">peak ${d.peak.toFixed(2)} bar</span>` : "") +
     (stale ? `<span class="flag on warn">no data for ${Math.round((Date.now() - lastEAt) / 1000)} s</span>` : "");
   for (const t of TILES) {
@@ -1523,6 +1532,7 @@ function drawCurve(id, kv, ke, n) {
 
 function sendSet(key, value) {
   if (bt.state !== "ready") { toast("Not connected"); updateField(key, ""); return; }
+  if (SET.locked) { toast("Vehicle moving: settings are read-only"); updateField(key, ""); return; }
   const v = String(value).trim().replace(",", ".");
   if (v === "" || isNaN(+v)) { toast("Not a number"); updateField(key, "err"); return; }
   SET.pend[key] = true;
@@ -1544,8 +1554,8 @@ $("setBody").addEventListener("click", e => {
 });
 
 function updateLock() {
-  // Speed-based settings lock is intentionally disabled for external simulation data.
-  if (SET.locked) { SET.locked = false; updateSettingsState(); }
+  const moving = !!(lastE && Date.now() - lastEAt < 3000 && !lastE.sim && lastE.speed > SET.lockspeed);   // simulator: fake speed, no lock
+  if (moving !== SET.locked) { SET.locked = moving; updateSettingsState(); }
 }
 
 function updateSettingsState() {
@@ -1558,7 +1568,7 @@ function updateSettingsState() {
            : "All settings saved on the device.";
   $("setState").textContent = st;
   $("lockBanner").style.display = SET.locked ? "block" : "none";
-  $("lockBanner").textContent = "";
+  $("lockBanner").textContent = `Vehicle moving (over ${SET.lockspeed} km/h): settings are read-only. Stop to change them.`;
   $("setBody").classList.toggle("locked", SET.locked || !ready);
 }
 
@@ -1569,7 +1579,8 @@ $("bSave").onclick = () => btSend("W");
 //  Console
 // ============================================================
 function consPush(L, cls) {
-  consLines.push([L, cls || ""]);
+  const d = new Date();
+  consLines.push([L, cls || "", `${pad2(d.getHours())}:${pad2(d.getMinutes())}:${pad2(d.getSeconds())}.${String(d.getMilliseconds()).padStart(3, "0")} `]);
   if (consLines.length > 700) consLines.splice(0, consLines.length - 500);
   consDirty = true;
 }
@@ -1577,7 +1588,8 @@ function renderConsole() {
   if (!consDirty) return;
   consDirty = false;
   const pre = $("cons"), atEnd = pre.scrollTop + pre.clientHeight >= pre.scrollHeight - 30;
-  pre.innerHTML = consLines.slice(-400).map(([l, c]) => c ? `<span class="${c}">${esc(l)}</span>` : esc(l)).join("\n");
+  const tm = $("cTime").checked;
+  pre.innerHTML = consLines.slice(-400).map(([l, c, t]) => (tm ? `<span class="tm">${t}</span>` : "") + (c ? `<span class="${c}">${esc(l)}</span>` : esc(l))).join("\n");
   if (atEnd) pre.scrollTop = pre.scrollHeight;
 }
 function sendReportChoice() { return btSend(`D ${$("cPeriod").value} ${$("cE").checked ? 1 : 0} ${$("cC").checked ? 1 : 0}`); }
@@ -1589,6 +1601,7 @@ try { const r = JSON.parse(localStorage.getItem("pb_report") || "null"); if (r) 
 });
 $("bInfo").onclick = () => btSend("i");
 $("bRst").onclick = () => btSend("r");
+$("cTime").onchange = () => { consDirty = true; renderConsole(); };
 $("bClr").onclick = () => { consLines.length = 0; consDirty = true; renderConsole(); };
 $("cForm").onsubmit = e => { e.preventDefault(); const v = $("cIn").value.trim(); if (v) { btSend(v); $("cIn").value = ""; } };
 
