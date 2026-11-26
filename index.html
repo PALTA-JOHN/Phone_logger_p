@@ -1545,7 +1545,7 @@ $("setBody").addEventListener("click", e => {
 });
 
 function updateLock() {
-  const moving = !!(lastE && Date.now() - lastEAt < 3000 && lastE.speed < SET.lockspeed);
+  const moving = !!(lastE && Date.now() - lastEAt < 3000 && lastE.speed > SET.lockspeed);
   if (moving !== SET.locked) { SET.locked = moving; updateSettingsState(); }
 }
 
