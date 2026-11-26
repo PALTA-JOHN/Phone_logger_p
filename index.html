@@ -185,6 +185,9 @@ select, input[type=number], input[type=text] { font: inherit; color: var(--text-
 
   <!-- ===== LIVE ===== -->
   <section class="tab" id="tab-live">
+    <div class="banner warn" id="logHint" style="display:none">Logging has not started on the device, so no live values come yet.
+      <button class="btn primary" id="bStartLog2" style="margin-left:8px">Start log</button>
+      <span class="hint" style="display:block;margin:6px 0 0">It runs on Serial and phone until the device reboots. You can also type <code>start_log</code> in the Serial Monitor.</span></div>
     <div class="live-top" id="liveTop"><span class="hint" style="margin:0">No live data yet. Press <b>Connect</b> and choose “PaltaBoost”. The first time the phone asks for the passkey.</span></div>
     <div id="liveBox"><div class="tiles" id="tiles"></div></div>
     <div class="linkinfo" id="linkinfo"></div>
@@ -237,8 +240,7 @@ select, input[type=number], input[type=text] { font: inherit; color: var(--text-
   <section class="tab" id="tab-console">
     <div class="toolbar">
       <label class="hint" style="margin:0">E period <select id="cPeriod"><option value="50">50 ms</option><option value="100" selected>100 ms</option><option value="200">200 ms</option><option value="500">500 ms</option><option value="1000">1 s</option></select></label>
-      <label class="hint" style="margin:0"><input type="checkbox" id="cE" checked> E lines</label>
-      <label class="hint" style="margin:0"><input type="checkbox" id="cC" checked> CAN + system</label>
+      <button class="btn primary" id="bStartLog" title="Start logging on the device: E / C / S lines on Serial and phone until the next reboot">Start log</button>
       <button class="btn" id="bInfo">Settings snapshot (i)</button>
       <button class="btn" id="bRst">Reset CAN totals (r)</button>
       <label class="hint" style="margin:0" title="the time each line arrived on the phone (ms)"><input type="checkbox" id="cTime"> Arrival time</label>
@@ -1128,6 +1130,7 @@ function liveLine(L) {
     const d = parseE(L); if (!d) { g.unparsed++; return; }
     const x = liveTime(d.t); pushE(g, x, d);
     lastE = d; lastEAt = Date.now(); grow(x);
+    if ($("logHint").style.display !== "none") showLogHint(false);
     if (SET.loaded) updateLock();
   } else if (L.startsWith("C ---- CAN")) g._cur = newC(L);
   else if (L.startsWith("C ")) { if (g._cur) parseCLine(g._cur, L); }
@@ -1246,6 +1249,7 @@ async function btOpen(again) {
 }
 
 function btOnDisconnect() {
+  showLogHint(false);
   if (bt.userClosed) { setBt("off"); return; }
   setBt("reconnecting");
   setTimeout(() => { if (!bt.userClosed) btOpen(true); }, 1000);
@@ -1384,6 +1388,7 @@ function setLine(L) {
   if (p[0] === "V") {
     const m = /mtu:(\d+)/.exec(L); bt.mtu = m ? +m[1] : null;
     const ls = /lockspeed:(\d+)/.exec(L); if (ls) SET.lockspeed = +ls[1];
+    const lg = /log:(\d)/.exec(L); if (lg) showLogHint(lg[1] === "0");
     return;
   }
   if (p[0] === "H") {
@@ -1401,6 +1406,7 @@ function setLine(L) {
     if (!(key in SET.val)) delete SET.pend[key];
     return;
   }
+  if (p[0] === "O" && /log started/.test(L)) showLogHint(false);
   if (p[0] === "O") { toast(L.slice(2)); if (/saved/.test(L)) { SET.unsaved = false; updateSettingsState(); } return; }
   if (p[0] !== "K") return;
   if (p[1] === "end") {
@@ -1592,13 +1598,17 @@ function renderConsole() {
   pre.innerHTML = consLines.slice(-400).map(([l, c, t]) => (tm ? `<span class="tm">${t}</span>` : "") + (c ? `<span class="${c}">${esc(l)}</span>` : esc(l))).join("\n");
   if (atEnd) pre.scrollTop = pre.scrollHeight;
 }
-function sendReportChoice() { return btSend(`D ${$("cPeriod").value} ${$("cE").checked ? 1 : 0} ${$("cC").checked ? 1 : 0}`); }
+function sendReportChoice() { return btSend(`D ${$("cPeriod").value} 1 1`); }   // logging can not be switched off: only the period
 // the report choice is remembered in this browser
-try { const r = JSON.parse(localStorage.getItem("pb_report") || "null"); if (r) { $("cPeriod").value = r.p; $("cE").checked = r.e; $("cC").checked = r.c; } } catch (e) {}
-["cPeriod", "cE", "cC"].forEach(id => $(id).onchange = () => {
-  try { localStorage.setItem("pb_report", JSON.stringify({ p: $("cPeriod").value, e: $("cE").checked, c: $("cC").checked })); } catch (e) {}
+try { const r = JSON.parse(localStorage.getItem("pb_report") || "null"); if (r && r.p) $("cPeriod").value = r.p; } catch (e) {}
+$("cPeriod").onchange = () => {
+  try { localStorage.setItem("pb_report", JSON.stringify({ p: $("cPeriod").value })); } catch (e) {}
   if (bt.state === "ready") sendReportChoice();
-});
+};
+function startLog() { btSend("start_log"); }
+$("bStartLog").onclick = startLog;
+$("bStartLog2").onclick = startLog;
+function showLogHint(on) { $("logHint").style.display = on ? "block" : "none"; if (!lastE) $("liveTop").style.display = on ? "none" : ""; }
 $("bInfo").onclick = () => btSend("i");
 $("bRst").onclick = () => btSend("r");
 $("cTime").onchange = () => { consDirty = true; renderConsole(); };
