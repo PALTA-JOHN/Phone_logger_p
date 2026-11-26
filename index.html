@@ -236,7 +236,7 @@ select, input[type=number], input[type=text] { font: inherit; color: var(--text-
   <!-- ===== CONSOLE ===== -->
   <section class="tab" id="tab-console">
     <div class="toolbar">
-      <label class="hint" style="margin:0">E period <select id="cPeriod"><option value="50">50 ms</option><option value="100">100 ms</option><option value="200" selected>200 ms</option><option value="500">500 ms</option><option value="1000">1 s</option></select></label>
+      <label class="hint" style="margin:0">E period <select id="cPeriod"><option value="50">50 ms</option><option value="100" selected>100 ms</option><option value="200">200 ms</option><option value="500">500 ms</option><option value="1000">1 s</option></select></label>
       <label class="hint" style="margin:0"><input type="checkbox" id="cE" checked> E lines</label>
       <label class="hint" style="margin:0"><input type="checkbox" id="cC" checked> CAN + system</label>
       <button class="btn" id="bInfo">Settings snapshot (i)</button>
@@ -1582,7 +1582,12 @@ function renderConsole() {
   if (atEnd) pre.scrollTop = pre.scrollHeight;
 }
 function sendReportChoice() { return btSend(`D ${$("cPeriod").value} ${$("cE").checked ? 1 : 0} ${$("cC").checked ? 1 : 0}`); }
-["cPeriod", "cE", "cC"].forEach(id => $(id).onchange = () => { if (bt.state === "ready") sendReportChoice(); });
+// the report choice is remembered in this browser
+try { const r = JSON.parse(localStorage.getItem("pb_report") || "null"); if (r) { $("cPeriod").value = r.p; $("cE").checked = r.e; $("cC").checked = r.c; } } catch (e) {}
+["cPeriod", "cE", "cC"].forEach(id => $(id).onchange = () => {
+  try { localStorage.setItem("pb_report", JSON.stringify({ p: $("cPeriod").value, e: $("cE").checked, c: $("cC").checked })); } catch (e) {}
+  if (bt.state === "ready") sendReportChoice();
+});
 $("bInfo").onclick = () => btSend("i");
 $("bRst").onclick = () => btSend("r");
 $("bClr").onclick = () => { consLines.length = 0; consDirty = true; renderConsole(); };
